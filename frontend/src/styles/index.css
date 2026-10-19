@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-gh-bg text-gh-text antialiased font-sans selection:bg-emerald-100 selection:text-emerald-900;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Refined, unobtrusive scrollbars for page-integrated views */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D8D8D3;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #BEBEB7;
+  }
+}
+
+@layer components {
+  /* Minimalist Greenhouse-style Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-gh-green text-white font-medium text-xs transition-colors duration-150 hover:bg-gh-greenHover active:bg-gh-greenDark disabled:opacity-50 disabled:pointer-events-none tracking-tight;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md bg-white border border-gh-border text-stone-700 font-medium text-xs transition-colors duration-150 hover:bg-stone-50 hover:text-stone-900 hover:border-gh-borderDark disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-stone-500 font-medium text-xs transition-colors duration-150 hover:text-stone-900 hover:bg-stone-100/70 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 text-white font-medium text-xs transition-colors duration-150 hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-danger-ghost {
+    @apply inline-flex items-center justify-center gap-1 px-2 py-1 rounded text-red-600 font-medium text-xs transition-colors duration-150 hover:bg-red-50 hover:text-red-700;
+  }
+
+  /* Integrated Minimalist Inputs */
+  .input {
+    @apply w-full px-3 py-2 rounded-md border border-gh-border bg-white text-stone-900 text-xs transition-colors duration-150 focus:outline-none focus:border-stone-400 focus:ring-1 focus:ring-stone-400 placeholder:text-stone-400;
+  }
+
+  .label {
+    @apply block text-[11px] font-medium uppercase tracking-wider text-stone-500 mb-1.5;
+  }
+
+  /* Discreet Status Badges */
+  .badge-active {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/60;
+  }
+
+  .badge-closed {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-stone-100 text-stone-600 border border-stone-200/60;
+  }
+
+  .badge-role {
+    @apply inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 tracking-wider uppercase border border-emerald-200/50;
+  }
+
+  /* Minimalist Sidebar Links */
+  .sidebar-link {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-stone-600 transition-colors duration-150 hover:text-stone-900 hover:bg-stone-100/80;
+  }
+
+  .sidebar-link.active {
+    @apply text-gh-greenDark bg-gh-greenLight font-semibold text-xs;
+  }
+}
+
+@layer utilities {
+  .font-untitled {
+    font-family: 'UntitledSerif-Regular', 'Untitled Serif', Newsreader, 'Playfair Display', Georgia, serif;
+  }
+
+  .bg-dotted-grid {
+    background-image: radial-gradient(rgba(14, 58, 36, 0.07) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+}
