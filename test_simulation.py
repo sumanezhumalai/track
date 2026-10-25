@@ -207,6 +207,84 @@ def run_smoke_tests():
     st, del_resp = admin.request("DELETE", f"/api/kanban/modules/{mod2_id}")
     check("Admin can delete module (204 No Content)", st == 204, f"got {st}")
 
+    # 10. PROJECT & VERSION EDIT / CASCADE DELETE INTEGRITY
+    print("\n--- 10. Project & Version Edit & Cascade Delete Integrity ---")
+    # Dev attempts edit & delete
+    st, resp = dev.request("PUT", f"/api/kanban/projects/{proj_id}", {"projectName": "Hacked Name"})
+    check("Dev cannot edit project (403 Forbidden)", st == 403, f"got {st}")
+
+    st, resp = dev.request("DELETE", f"/api/kanban/projects/{proj_id}")
+    check("Dev cannot delete project (403 Forbidden)", st == 403, f"got {st}")
+
+    st, resp = dev.request("PUT", f"/api/kanban/projects/{proj_id}/versions/{v2_id}", {"label": "Hacked v2"})
+    check("Dev cannot edit version (403 Forbidden)", st == 403, f"got {st}")
+
+    st, resp = dev.request("DELETE", f"/api/kanban/projects/{proj_id}/versions/{v2_id}")
+    check("Dev cannot delete version (403 Forbidden)", st == 403, f"got {st}")
+
+    # Admin edits project
+    updated_name = proj_name + " (Updated)"
+    st, resp = admin.request("PUT", f"/api/kanban/projects/{proj_id}", {
+        "projectName": updated_name,
+        "description": "Updated gateway description"
+    })
+    check("Admin edits project name & description (200 OK)", st == 200 and resp.get("projectName") == updated_name, f"resp: {resp}")
+
+    # Admin edits version 2
+    st, resp = admin.request("PUT", f"/api/kanban/projects/{proj_id}/versions/{v2_id}", {
+        "label": "v2.1.0-RC1",
+        "releaseNotes": "Updated release notes for RC1"
+    })
+    check("Admin edits version label & release notes (200 OK)", st == 200 and resp.get("label") == "v2.1.0-RC1", f"resp: {resp}")
+
+    # Create temporary isolated project to test single-version delete block and cascade delete
+    st, temp_proj = admin.request("POST", "/api/kanban/projects", {
+        "projectName": f"Cascade Test {int(time.time())}",
+        "description": "Testing cascade"
+    })
+    temp_id = temp_proj.get("projectId")
+    st, temp_versions = admin.request("GET", f"/api/kanban/projects/{temp_id}/versions")
+    temp_v1_id = temp_versions[0].get("versionId")
+
+    # Attempt to delete the only version of temp_proj -> should fail 400
+    st, resp = admin.request("DELETE", f"/api/kanban/projects/{temp_id}/versions/{temp_v1_id}")
+    check("Cannot delete only remaining version (400 Bad Request)", st == 400, f"got {st}")
+
+    # Add version 2 to temp_proj, then add a module and subtask to version 2
+    st, temp_v2 = admin.request("POST", f"/api/kanban/projects/{temp_id}/versions", {
+        "label": "v2.0.0",
+        "releaseNotes": "v2"
+    })
+    temp_v2_id = temp_v2.get("versionId")
+
+    st, temp_mod = admin.request("POST", f"/api/kanban/modules?versionId={temp_v2_id}", {
+        "title": "Temp Module",
+        "priority": "low",
+        "status": "start"
+    })
+    temp_mod_id = temp_mod.get("moduleId")
+
+    st, temp_sub = admin.request("POST", f"/api/kanban/modules/{temp_mod_id}/subtasks", {
+        "text": "Temp Subtask"
+    })
+    temp_sub_id = temp_sub.get("subtaskId")
+
+    # Delete version 2 -> should cascade and delete temp_mod and temp_sub
+    st, resp = admin.request("DELETE", f"/api/kanban/projects/{temp_id}/versions/{temp_v2_id}")
+    check("Admin deletes version with modules (204 No Content)", st == 204, f"got {st}")
+
+    # Verify version 2 is gone
+    st, temp_versions_after = admin.request("GET", f"/api/kanban/projects/{temp_id}/versions")
+    check("Version 2 no longer exists", len(temp_versions_after) == 1 and temp_versions_after[0].get("versionId") == temp_v1_id)
+
+    # Delete entire temp_proj -> should cascade and delete version 1 as well
+    st, resp = admin.request("DELETE", f"/api/kanban/projects/{temp_id}")
+    check("Admin deletes project with cascade (204 No Content)", st == 204, f"got {st}")
+
+    # Verify temp_proj is gone
+    st, all_projs = admin.request("GET", "/api/kanban/projects")
+    check("Deleted project no longer in project list", not any(p.get("projectId") == temp_id for p in all_projs))
+
     print("\n=======================================================")
     print(f" TOTAL TESTS: {passed + failed} | PASSED: {passed} | FAILED: {failed}")
     print("=======================================================\n")

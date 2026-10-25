@@ -42,7 +42,11 @@ public class SecurityConfig {
 
                 // ── Kanban: project admin actions ────────────────────────────
                 .requestMatchers(HttpMethod.POST,   "/api/kanban/projects").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/kanban/projects/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/kanban/projects/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,   "/api/kanban/projects/*/versions").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/kanban/projects/*/versions/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/kanban/projects/*/versions/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,   "/api/kanban/projects/*/members").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/kanban/projects/*/members/**").hasRole("ADMIN")
 

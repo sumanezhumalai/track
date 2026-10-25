@@ -71,6 +71,34 @@ public class ProjectService {
         return project;
     }
 
+    @Transactional
+    public Project updateProject(Long projectId, ProjectRequest req, String updatedBy) {
+        Project project = getProjectOrThrow(projectId);
+        if (req.projectName() != null && !req.projectName().equalsIgnoreCase(project.getProjectName())) {
+            projectRepo.findByProjectName(req.projectName()).ifPresent(existing -> {
+                if (!existing.getProjectId().equals(projectId)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Project already exists: " + req.projectName());
+                }
+            });
+            project.setProjectName(req.projectName());
+        }
+        if (req.description() != null) {
+            project.setDescription(req.description());
+        }
+        Project saved = projectRepo.save(project);
+        auditService.log("PROJECT_UPDATED: " + saved.getProjectName(), updatedBy, "SUCCESS");
+        return saved;
+    }
+
+    @Transactional
+    public void deleteProject(Long projectId, String deletedBy) {
+        Project project = getProjectOrThrow(projectId);
+        String name = project.getProjectName();
+        projectRepo.deleteById(projectId);
+        auditService.log("PROJECT_DELETED: " + name, deletedBy, "SUCCESS");
+    }
+
     // ── Versions ─────────────────────────────────────────────────────────────
 
     public List<ProjectVersion> getVersions(Long projectId) {
@@ -100,6 +128,40 @@ public class ProjectService {
                 "PROJECT_VERSION_ADDED: " + project.getProjectName() + " v" + nextNumber,
                 createdBy, "SUCCESS");
         return version;
+    }
+
+    @Transactional
+    public ProjectVersion updateVersion(Long projectId, Long versionId, ProjectVersionRequest req, String updatedBy) {
+        Project project = getProjectOrThrow(projectId);
+        ProjectVersion version = versionRepo.findById(versionId)
+                .filter(v -> v.getProject().getProjectId().equals(projectId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found: " + versionId));
+
+        if (req.label() != null) {
+            version.setLabel(req.label());
+        }
+        if (req.releaseNotes() != null) {
+            version.setReleaseNotes(req.releaseNotes());
+        }
+        ProjectVersion saved = versionRepo.save(version);
+        auditService.log("PROJECT_VERSION_UPDATED: " + project.getProjectName() + " v" + saved.getVersionNumber(), updatedBy, "SUCCESS");
+        return saved;
+    }
+
+    @Transactional
+    public void deleteVersion(Long projectId, Long versionId, String deletedBy) {
+        Project project = getProjectOrThrow(projectId);
+        List<ProjectVersion> allVersions = versionRepo.findAllByProject_ProjectIdOrderByVersionNumberDesc(projectId);
+        if (allVersions.size() <= 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete the only remaining version of a project");
+        }
+        ProjectVersion version = versionRepo.findById(versionId)
+                .filter(v -> v.getProject().getProjectId().equals(projectId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found: " + versionId));
+
+        int versionNumber = version.getVersionNumber();
+        versionRepo.deleteById(versionId);
+        auditService.log("PROJECT_VERSION_DELETED: " + project.getProjectName() + " v" + versionNumber, deletedBy, "SUCCESS");
     }
 
     // ── Members ───────────────────────────────────────────────────────────────
