@@ -290,7 +290,7 @@ export default function FeaturesModules() {
         title="Delete Project Initiative"
         itemType="Project"
         itemName={projectToDelete?.projectName}
-        description={`This will permanently delete project "${projectToDelete?.projectName}", including all associated versions, members, modules, and subtasks. This cascade action cannot be undone.`}
+        description={`Are you sure you want to delete project "${projectToDelete?.projectName}"?`}
         confirmWord="confirm"
         loading={deleteLoading}
       />

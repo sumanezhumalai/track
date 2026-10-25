@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { AlertTriangle, X, Loader2 } from 'lucide-react'
+import { AlertCircle, X, Loader2 } from 'lucide-react'
 
 export default function ConfirmDeleteModal({
   isOpen,
@@ -35,17 +35,17 @@ export default function ConfirmDeleteModal({
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-dropdown border border-gh-border relative">
         {/* Header */}
-        <div className="flex items-start justify-between pb-3 border-b border-gh-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
-              <AlertTriangle className="w-5 h-5" />
+        <div className="flex items-start justify-between pb-3.5 border-b border-gh-border">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center shrink-0 border border-stone-200">
+              <AlertCircle className="w-4 h-4 text-stone-600" />
             </div>
             <div>
               <h3 className="text-base font-semibold text-stone-900 tracking-tight">
                 {title}
               </h3>
-              <p className="text-[11px] text-stone-500 font-normal">
-                Permanent deletion safeguard
+              <p className="text-[11px] text-stone-400 font-normal">
+                Please confirm deletion
               </p>
             </div>
           </div>
@@ -60,23 +60,26 @@ export default function ConfirmDeleteModal({
 
         {/* Body */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div className="text-xs text-stone-600 leading-relaxed space-y-2">
+          <div className="text-xs text-stone-600 leading-relaxed">
             <p>
               {description || (
                 <>
-                  Are you sure you want to delete this {itemType}{' '}
+                  Are you sure you want to delete {itemType.toLowerCase()}{' '}
                   {itemName && <strong className="font-semibold text-stone-900">"{itemName}"</strong>}?
                 </>
               )}
             </p>
-            <p className="text-red-600 text-[11px] font-medium bg-red-50/80 p-2.5 rounded-md border border-red-200/60">
-              ⚠️ Warning: This action cascades and permanently removes all related records from the database. It cannot be undone.
-            </p>
+          </div>
+
+          {/* Clean Non-Technical Warning Note */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-stone-50 border border-stone-200/80 text-stone-600 text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+            <span className="font-medium text-stone-700">Irreversible • No backup or undo available</span>
           </div>
 
           <div>
             <label className="block text-[11px] font-medium uppercase tracking-wider text-stone-500 mb-1.5">
-              Type <span className="font-mono text-red-600 font-bold bg-stone-100 px-1 py-0.5 rounded border border-stone-200">{confirmWord}</span> to confirm:
+              Type <span className="font-mono text-stone-800 font-semibold bg-stone-100 px-1 py-0.5 rounded border border-stone-200">{confirmWord}</span> to confirm:
             </label>
             <input
               type="text"
@@ -85,8 +88,8 @@ export default function ConfirmDeleteModal({
               disabled={loading}
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
-              placeholder={`type "${confirmWord}" to enable deletion`}
-              className="w-full px-3 py-2 rounded-md border border-gh-border bg-white text-stone-900 text-xs font-mono transition-colors duration-150 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 placeholder:font-sans placeholder:text-stone-400"
+              placeholder={`type "${confirmWord}" to proceed`}
+              className="w-full px-3 py-2 rounded-md border border-gh-border bg-white text-stone-900 text-xs font-mono transition-colors duration-150 focus:outline-none focus:border-stone-500 focus:ring-1 focus:ring-stone-500 placeholder:font-sans placeholder:text-stone-400"
             />
           </div>
 

@@ -47,7 +47,6 @@ export default function BranchManagementModal({
     (a, b) => (b.versionNumber || 0) - (a.versionNumber || 0)
   )
 
-  const activeVersion = sortedVersions[0]
   const maxVersionNum = sortedVersions.reduce(
     (max, v) => Math.max(max, v.versionNumber || 0),
     0
@@ -402,9 +401,9 @@ export default function BranchManagementModal({
         title="Delete Version Branch"
         itemType="Branch"
         itemName={versionToDelete?.label || `v${versionToDelete?.versionNumber}`}
-        description={`This will permanently delete branch ${
+        description={`Are you sure you want to delete branch "${
           versionToDelete?.label || `v${versionToDelete?.versionNumber}`
-        } from project "${project.projectName}", along with all modules, subtasks, and board state scoped to it.`}
+        }"?`}
         confirmWord="confirm"
         loading={deleteLoading}
       />
