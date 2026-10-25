@@ -1,120 +1,154 @@
-# Design Specification: Features & Modules Frontend Setup
+# Design Specification: Features & Modules Frontend Setup & Cascade Management
 
 **Date**: 2026-10-25  
-**Status**: Validated Design  
+**Status**: Validated Design (Updated with Edit/Delete & DB Cascade)  
 **Author**: Suman & Antigravity  
-**Target System**: `egssupport` Frontend (React 19 + Tailwind CSS + Vite)
+**Target System**: `egssupport` (Spring Boot REST Backend + React 19 Frontend)
 
 ---
 
 ## 1. Overview & Purpose
 
-The purpose of this feature is to establish a dedicated **"Features & Modules"** page in the `egssupport` web application. This page serves as the entry point for all engineering projects, showing project listings as cards, displaying their active versions and branch counts, providing an incremental branching studio via a centered dialog modal, and allowing administrators to add new projects.
-
-This design sets the foundation for seamlessly integrating the Kanban module board in the subsequent phase.
-
----
-
-## 2. User Roles & Permissions (RBAC)
-
-| Role | Project Visibility | Create Project | Create Branch | View Branches | Open Board (Phase 2) |
-|---|---|---|---|---|---|
-| **ADMIN** | All active projects | Yes (`POST /api/kanban/projects`) | Yes (`POST /api/kanban/projects/{id}/versions`) | Yes | Yes (Full access to all columns) |
-| **DEV** | Only assigned projects (filtered by backend) | No (Button hidden) | No (Form hidden) | Yes | Yes (Filtered by assigned modules) |
+The purpose of this feature is to establish a dedicated **"Features & Modules"** page in the `egssupport` application. It provides:
+1. Complete Project lifecycle management: listing as cards, creating new projects, editing project metadata, and deleting projects with typed confirmation.
+2. Complete Version/Branch lifecycle management: viewing branch history, creating incremental versions, editing version labels/release notes, and deleting versions with typed confirmation.
+3. Database foreign-key cascade enablement so that deleting a project or version cleanly cascades throughout the database (`project` → `project_version` & `project_member` → `module` → `module_assignee` & `module_subtask`).
+4. Groundwork for seamlessly opening the Kanban module board in the subsequent phase.
 
 ---
 
-## 3. UI/UX Architecture & Components
+## 2. Database Foreign Key Cascade Analysis & Migration
 
-### 3.1. Sidebar Navigation ([Sidebar.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/Sidebar.jsx))
-* Under the **Operations** section, directly above Sessions, add:
-  * NavLink: `/features`
-  * Icon: `Layers` (from `lucide-react`)
-  * Label: `"Features & Modules"`
-  * Active state styling: `.sidebar-link.active` (`bg-gh-greenLight text-gh-greenDark font-semibold`)
-  * Visible to all authenticated roles.
+### Current Database State (Pre-Migration)
+Inspection of PostgreSQL `information_schema.referential_constraints` on schema `EGS`:
+* `project_version.project_id -> project.project_id` : `RESTRICT` ⚠️
+* `project_member.project_id -> project.project_id` : `RESTRICT` ⚠️
+* `module.version_id -> project_version.version_id` : `RESTRICT` ⚠️
+* `module_assignee.module_id -> module.module_id` : `CASCADE` ✅
+* `module_subtask.module_id -> module.module_id` : `CASCADE` ✅
 
-### 3.2. Route Registration ([App.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/App.jsx))
-* Register route `/features` wrapped with `<ProtectedRoute>` and `<AppLayout>`.
-* Renders `FeaturesModules.jsx` page.
+Because `project_version`, `project_member`, and `module` were set to `RESTRICT`, attempting to delete a project or version directly in PostgreSQL throws a foreign key violation.
 
-### 3.3. Main Page ([FeaturesModules.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/pages/FeaturesModules.jsx))
-* **Page Header**:
-  * Title: `"Features & Modules"` using serif heading (`font-untitled text-2xl font-semibold text-stone-900`).
-  * Subtitle: `"Initiatives, version branches, and module workflow boards."`
-  * Search Bar: Live search filter for project name and description.
-  * Action Buttons:
-    * Refresh button (`.btn-secondary`).
-    * "+ New Project" button (`.btn-primary`), rendered only if `isAdmin`.
-* **State Management**:
-  * `projects`: Array of projects loaded from `GET /api/kanban/projects`.
-  * `projectVersionsMap`: Key-value map `{ [projectId]: ProjectVersion[] }` loaded via parallel fetch from `GET /api/kanban/projects/{id}/versions`.
-  * `loading`: Boolean loading indicator for initial fetch.
-  * `selectedProjectForBranchModal`: Project object or null for active branch dialog.
-  * `showNewProjectModal`: Boolean controlling new project creation dialog.
+### Cascade Fix (Migration `V4__cascade_delete_constraints.sql`)
+Alter foreign key constraints in schema `EGS` to `ON DELETE CASCADE`:
+```sql
+ALTER TABLE "EGS"."project_version"
+    DROP CONSTRAINT project_version_project_id_fkey,
+    ADD CONSTRAINT project_version_project_id_fkey
+        FOREIGN KEY (project_id) REFERENCES "EGS"."project"(project_id) ON DELETE CASCADE;
 
-### 3.4. Project Card Component ([ProjectCard.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/ProjectCard.jsx))
-* **Visual Frame**:
-  * `bg-white border border-gh-border rounded-xl p-5 hover:border-stone-400/80 hover:shadow-md transition-all duration-150 flex flex-col justify-between`.
-* **Top Header**:
-  * Left: Project name (`text-sm font-semibold text-stone-900 truncate`).
-  * Right: **Branch Trigger Chip Button**:
-    * Icon: `<GitBranch className="w-3.5 h-3.5 text-emerald-800" />`.
-    * Text: `{versionCount} {versionCount === 1 ? 'branch' : 'branches'}`.
-    * Click behavior: Calls `e.stopPropagation()` and triggers branch modal open for this project.
-* **Body**:
-  * Description: Rendered with `line-clamp-2 text-xs text-stone-600 leading-relaxed`. Fallback to `"No description provided."` in subtle italic text.
-* **Footer / Metadata**:
-  * **Active Version Tag**: Pill badge with `<Tag className="w-3 h-3 text-emerald-700" />` and label `Active: {activeVersionLabel}` (e.g. `Active: v1.0.0`).
-  * **Creation Info**: Created by handle and date format.
-  * **Interactive Action Cue**: Subtle `"View Modules →"` cue on card hover. Clicking card triggers preview notice for Phase 2.
+ALTER TABLE "EGS"."project_member"
+    DROP CONSTRAINT project_member_project_id_fkey,
+    ADD CONSTRAINT project_member_project_id_fkey
+        FOREIGN KEY (project_id) REFERENCES "EGS"."project"(project_id) ON DELETE CASCADE;
 
-### 3.5. Branch Management Modal ([BranchManagementModal.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/BranchManagementModal.jsx))
-* **Centered Dialog Container**:
-  * Backdrop blur overlay (`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm`).
-  * Modal container: `max-w-2xl w-full max-h-[85vh] bg-white rounded-2xl border border-gh-border shadow-dropdown flex flex-col overflow-hidden`.
-* **Header**:
-  * Icon badge with `GitBranch`, title `"Branch & Version Management"`, and project name subtitle.
-  * Close button (`<X />`).
-* **Branch Timeline (Top/Middle Pane)**:
-  * Scrollable list of existing versions from newest to oldest.
-  * Active tag indicator on the latest version (`CheckCircle2` + `"Active Version"`).
-  * Version badge (`v{versionNumber}`, label `v1.0.0`), release notes text, author, and timestamp.
-* **Incremental Branch Creator (Bottom Pane, Admin only)**:
-  * Clear section header: `"Create New Branch / Version"`.
-  * Computes next incremental version number: `version_number = latestVersionNumber + 1`.
-  * Prompt: `"Next incremental version is v{nextVersionNumber}"`.
-  * Optional label input: `e.g. v2.0.0 (Leave blank for default v{nextVersionNumber}.0.0)`.
-  * Optional release notes textarea: `Key deliverables, changes, or targets...`.
-  * Submit button: `.btn-primary` with `"Create Branch"`.
-  * Submits `POST /api/kanban/projects/{id}/versions`.
-  * Refreshes versions list immediately on success and updates project card on main page.
-
-### 3.6. Add Project Modal ([NewProjectModal.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/NewProjectModal.jsx))
-* **Fields**:
-  * **Project Name**: Text input (`required`, autofocus).
-  * **Description**: Textarea (`optional`).
-  * **Notice**: Explains that version 1 (`v1.0.0`) is automatically initialized by the system upon creation.
-* **Submission**:
-  * Sends `POST /api/kanban/projects`.
-  * Refreshes project list and displays success toast.
+ALTER TABLE "EGS"."module"
+    DROP CONSTRAINT module_version_id_fkey,
+    ADD CONSTRAINT module_version_id_fkey
+        FOREIGN KEY (version_id) REFERENCES "EGS"."project_version"(version_id) ON DELETE CASCADE;
+```
+**Cascade Behavior Result**:
+* Deleting a `project` cascades to:
+  1. `project_version` (all versions deleted)
+  2. `project_member` (all members removed)
+  3. `module` (all modules under all versions deleted)
+  4. `module_assignee` & `module_subtask` (all subtasks & assignments deleted)
+* Deleting a `project_version` cascades to:
+  1. `module` (all modules under this version deleted)
+  2. `module_assignee` & `module_subtask` (all subtasks & assignments deleted)
 
 ---
 
-## 4. API Endpoints & Data Contracts
+## 3. Backend REST API Endpoints
 
-| Method | Endpoint | Request Body | Response / Effect |
+All modifications require `ROLE_ADMIN`.
+
+| Method | Endpoint | Request Body | Description |
 |---|---|---|---|
-| `GET` | `/egssupport/api/kanban/projects` | None | Returns `List<Project>` (`projectId`, `projectName`, `description`, `createdBy`, `createdAt`, `isActive`) |
-| `POST` | `/egssupport/api/kanban/projects` | `{ "projectName": string, "description": string }` | Returns created `Project`. Seeds `v1.0.0` in DB automatically. |
-| `GET` | `/egssupport/api/kanban/projects/{id}/versions` | None | Returns `List<ProjectVersion>` (`versionId`, `versionNumber`, `label`, `releaseNotes`, `createdBy`, `createdAt`, `isActive`) |
-| `POST` | `/egssupport/api/kanban/projects/{id}/versions` | `{ "label": string, "releaseNotes": string }` | Returns created `ProjectVersion` with incremental `version_number`. |
+| `GET` | `/api/kanban/projects` | None | Returns active projects (Admin sees all; Dev sees assigned). |
+| `POST` | `/api/kanban/projects` | `{ projectName, description }` | Creates project and seeds version 1 (`v1.0.0`). |
+| `PUT` | `/api/kanban/projects/{id}` | `{ projectName, description }` | Updates project name & description. |
+| `DELETE` | `/api/kanban/projects/{id}` | None | Hard deletes project with DB-level cascade. |
+| `GET` | `/api/kanban/projects/{id}/versions` | None | Returns all versions for a project, newest first. |
+| `POST` | `/api/kanban/projects/{id}/versions` | `{ label, releaseNotes }` | Adds next incremental version (`MAX + 1`). |
+| `PUT` | `/api/kanban/projects/{projectId}/versions/{versionId}` | `{ label, releaseNotes }` | Updates version label & release notes. |
+| `DELETE` | `/api/kanban/projects/{projectId}/versions/{versionId}` | None | Deletes version with DB-level cascade (blocked if only 1 version remains). |
+
+---
+
+## 4. Frontend UI/UX Architecture & Components
+
+### 4.1. Sidebar Navigation ([Sidebar.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/Sidebar.jsx))
+* Under **Operations**, add NavLink `/features` labeled **"Features & Modules"** with icon `Layers`.
+* Active state highlights in `bg-gh-greenLight text-gh-greenDark font-semibold`.
+
+### 4.2. Route Registration ([App.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/App.jsx))
+* Register route `/features` wrapped with `<ProtectedRoute>` and `<AppLayout>`.
+
+### 4.3. Main Page ([FeaturesModules.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/pages/FeaturesModules.jsx))
+* **Header**:
+  * Title: `"Features & Modules"` (`font-untitled text-2xl font-semibold text-stone-900`).
+  * Subtitle: `"Initiatives, version branches, and module workflow boards."`
+  * Action controls: Live search input, Refresh button, "+ New Project" button (Admin only).
+* **Grid**:
+  * 3-column responsive grid (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5`).
+  * Empty state with call-to-action when no projects match.
+
+### 4.4. Project Card Component ([ProjectCard.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/ProjectCard.jsx))
+* **Card Frame**:
+  * White surface (`bg-white border border-gh-border rounded-xl p-5 hover:border-stone-400/80 hover:shadow-md transition-all duration-150`).
+* **Header**:
+  * Left: Project name with initiative icon.
+  * Right Action Cluster:
+    * **Branch chip button**: `<GitBranch />` + `{count} {count === 1 ? 'branch' : 'branches'}`. Opens Branch Management Modal.
+    * **Admin Card Actions (Edit & Delete)**:
+      * Edit icon button (`Edit2`): Opens Edit Project Modal.
+      * Delete icon button (`Trash2`): Opens Delete Confirmation Dialog with `"confirm"` requirement.
+* **Body**:
+  * Description with 2-line clamp (`line-clamp-2 text-xs text-stone-600 leading-relaxed`).
+* **Footer**:
+  * Active Version chip: `<Tag />` + `Active: {activeVersionLabel}`.
+  * Author & creation date.
+  * `"View Modules →"` cue on hover (clicking card displays preview notice for Phase 2).
+
+### 4.5. Typed Delete Confirmation Dialog ([ConfirmDeleteModal.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/ConfirmDeleteModal.jsx))
+* Generic, reusable confirmation dialog:
+  * Title: `"Delete {itemType}"` with red warning icon (`AlertTriangle`).
+  * Message: Clear description of cascade impact:
+    * E.g. for Project: *"This will permanently delete project **{title}** and all its branches, modules, and subtasks. This cascade action cannot be undone."*
+    * E.g. for Version: *"This will permanently delete branch **{title}** and all associated modules and subtasks."*
+  * Verification Prompt: *"To confirm deletion, please type **confirm** below:"*
+  * Input field with placeholder `"type confirm to proceed"`.
+  * Delete Button (`.btn-danger`): Disabled until input strictly equals `"confirm"`.
+  * Cancel Button (`.btn-secondary`).
+
+### 4.6. Edit Project Modal ([EditProjectModal.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/EditProjectModal.jsx))
+* Pre-filled form with `projectName` and `description`.
+* Updates project via `PUT /api/kanban/projects/{id}` and updates local state.
+
+### 4.7. Branch Management Modal ([BranchManagementModal.jsx](file:///home/suman/Projects/workspace/Java/springboot/practice/egssupport/frontend/src/components/BranchManagementModal.jsx))
+* **Timeline Pane**:
+  * Lists versions newest first.
+  * Displays version number, label, release notes, author, and timestamp.
+  * **Per-Version Actions (Admin only)**:
+    * **Edit button (`Edit2`)**: Inline or popover edit for `label` and `releaseNotes`.
+    * **Delete button (`Trash2`)**: Opens ConfirmDeleteModal requiring `"confirm"`. (Disabled with tooltip if it is the only branch remaining).
+* **Create Branch Form (Admin only)**:
+  * Next version counter prompt: `"Next incremental version: v{MAX + 1}"`.
+  * Label input & Release notes textarea.
+  * Submits `POST /api/kanban/projects/{id}/versions`.
 
 ---
 
 ## 5. Verification & Testing Strategy
 
-1. **Linting & Code Integrity**: Run `npm run lint` with `oxlint` in `frontend/`.
-2. **Build Verification**: Run `npm run build` in `frontend/` to confirm zero JSX/CSS/Vite syntax errors.
-3. **End-to-End Simulation Check**: Validate that API calls adhere to backend contracts established in `test_simulation.py` and `ProjectController.java`.
-4. **UI Visual Validation**: Verify responsiveness, hover states, branch modal interaction, and active version display in the browser.
+1. **Database Cascade Verification**:
+   * Apply `V4` SQL migration altering constraints to `ON DELETE CASCADE`.
+   * Create a dummy project with version, module, and subtasks; delete project; verify all child rows in `project_version`, `project_member`, `module`, `module_assignee`, and `module_subtask` are completely wiped from Postgres.
+2. **Backend API Testing**:
+   * Add test simulation assertions in `test_simulation.py` for project edit, version edit, version delete cascade, and project delete cascade.
+3. **Frontend Build & Lint**:
+   * Run `npm run lint` and `npm run build` in `frontend/`.
+4. **UI Validation**:
+   * Verify typed "confirm" logic blocks accidental clicks until exact string is entered.
+   * Verify real-time list updates after edit and delete operations.
