@@ -4,6 +4,7 @@ import com.something.support.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -33,8 +34,27 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/ae").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/users/ae").authenticated()
                 .requestMatchers("/api/users/**", "/api/analytics/**").hasRole("ADMIN")
+
+                // ── Kanban: read (all authenticated users) ───────────────────
+                .requestMatchers(HttpMethod.GET,   "/api/kanban/**").authenticated()
+
+                // ── Kanban: project admin actions ────────────────────────────
+                .requestMatchers(HttpMethod.POST,   "/api/kanban/projects").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/kanban/projects/*/versions").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/kanban/projects/*/members").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/kanban/projects/*/members/**").hasRole("ADMIN")
+
+                // ── Kanban: module admin actions ──────────────────────────────
+                .requestMatchers(HttpMethod.POST,   "/api/kanban/modules").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/kanban/modules/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/kanban/modules/*/assignees").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/kanban/modules/*").hasRole("ADMIN")
+
+                // ── Kanban: dev actions (move, reorder, subtasks) ─────────────
+                .requestMatchers("/api/kanban/**").authenticated()
+
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
             )
