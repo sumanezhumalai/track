@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Radio,
+  Layers,
   Users2,
   LineChart,
   LogOut,
@@ -84,6 +85,14 @@ export default function Sidebar() {
               >
                 <LayoutDashboard className="w-3.5 h-3.5 shrink-0 opacity-80" />
                 <span>Dashboard</span>
+              </NavLink>
+
+              <NavLink
+                to="/features"
+                className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              >
+                <Layers className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                <span>Features & Modules</span>
               </NavLink>
 
               <NavLink

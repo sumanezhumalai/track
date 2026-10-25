@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import SetPassword from './pages/SetPassword'
 import Dashboard from './pages/Dashboard'
 import Sessions from './pages/Sessions'
+import FeaturesModules from './pages/FeaturesModules'
 import UserManagement from './pages/UserManagement'
 import TeamAnalytics from './pages/TeamAnalytics'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -20,6 +21,16 @@ export default function App() {
           <ProtectedRoute>
             <AppLayout>
               <Dashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/features"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <FeaturesModules />
             </AppLayout>
           </ProtectedRoute>
         }
