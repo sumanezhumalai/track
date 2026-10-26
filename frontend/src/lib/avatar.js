@@ -109,3 +109,24 @@ export function normalizeUserData(raw) {
     email: raw.email || '',
   }
 }
+
+/**
+ * Safely parses the authenticated user from localStorage with normalized role and isAdmin flag.
+ */
+export function getStoredUser() {
+  const raw = localStorage.getItem('user')
+  let user = { name: 'User', role: 'DEV' }
+  if (raw) {
+    try {
+      user = JSON.parse(raw)
+    } catch {
+      /* ignore JSON parse error */
+    }
+  }
+  const role = (user.role || '').toUpperCase().replace(/^ROLE_/, '')
+  return {
+    ...user,
+    role,
+    isAdmin: role === 'ADMIN',
+  }
+}

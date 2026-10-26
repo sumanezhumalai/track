@@ -28,21 +28,26 @@ export function calculateProgress(subtasks = []) {
   return Math.round((completed / subtasks.length) * 100)
 }
 
-export function groupTasksByStatus(tasks, columns, users) {
-  const grouped = Object.fromEntries(columns.map(column => [column.id, []]))
+/**
+ * Formats a Date or ISO date string using native Intl/toLocaleDateString.
+ * Default style: "Oct 26, 2026"
+ */
+export function formatDate(dateInput, fallback = '') {
+  if (!dateInput) return fallback
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput)
+  if (isNaN(d.getTime())) return fallback
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
-  tasks.forEach(task => {
-    const assignees = (task.assigneeIds || [])
-      .map(id => users.find(user => user.id === id))
-      .filter(Boolean)
-
-    const enriched = {
-      ...task,
-      assignees
-    }
-
-    ;(grouped[task.status] ||= []).push(enriched)
-  })
-
-  return grouped
+/**
+ * Converts a Date or date string to local "YYYY-MM-DD" format for backend APIs.
+ */
+export function toDateString(dateInput) {
+  if (!dateInput) return null
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput)
+  if (isNaN(d.getTime())) return null
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }

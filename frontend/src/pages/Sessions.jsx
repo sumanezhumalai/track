@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import SessionCard from '../components/SessionCard'
 import api from '../api/axios'
+import { getStoredUser } from '../lib/avatar'
 
 export default function Sessions() {
   const [sessions, setSessions] = useState([])
@@ -39,16 +40,8 @@ export default function Sessions() {
   const [devOptions, setDevOptions] = useState([])
   const [aeOptions, setAeOptions] = useState([])
 
-  const rawUser = localStorage.getItem('user')
-  let user = { name: 'User', role: 'DEV' }
-  if (rawUser) {
-    try {
-      user = JSON.parse(rawUser)
-    } catch {
-      // ignore
-    }
-  }
-  const isAdmin = (user.role || '').toUpperCase().includes('ADMIN')
+  const user = getStoredUser()
+  const isAdmin = user.isAdmin
 
   const fetchSessions = async () => {
     setLoading(true)

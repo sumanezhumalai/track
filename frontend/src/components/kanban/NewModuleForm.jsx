@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
 import {
   X,
   Calendar as CalendarIcon,
@@ -35,7 +34,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import UserListDialog from '@/components/kanban/UserListDialog'
 import { cn } from '@/lib/utils'
-import { getPriorityColor } from '@/lib/taskUtils'
+import { getPriorityColor, formatDate, toDateString } from '@/lib/taskUtils'
 import api from '@/api/axios'
 import { getAvatarInitials, getAvatarColorClass, normalizeUserData } from '@/lib/avatar'
 
@@ -90,7 +89,7 @@ export default function NewModuleForm({
         status: formData.status,
         priority: formData.priority,
         assigneeDevNames: formData.assigneeDevNames,
-        dueDate: formData.dueDate ? format(formData.dueDate, 'yyyy-MM-dd') : null,
+        dueDate: formData.dueDate ? toDateString(formData.dueDate) : null,
         subtaskTexts: formData.subtaskTexts,
       }
       const res = await api.post(`/kanban/modules?versionId=${versionId}`, payload)
@@ -221,7 +220,7 @@ export default function NewModuleForm({
                   className={cn('w-full justify-start text-left font-normal', !formData.dueDate && 'text-muted-foreground')}
                 >
                   <CalendarIcon className='mr-2 h-4 w-4' />
-                  {formData.dueDate ? format(formData.dueDate, 'PPP') : <span>Pick a date</span>}
+                  {formData.dueDate ? formatDate(formData.dueDate) : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className='w-auto p-0' align='start'>

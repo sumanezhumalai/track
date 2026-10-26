@@ -27,8 +27,6 @@ public class ProjectService {
     private final ProjectVersionRepository     versionRepo;
     private final ProjectMemberRepository      memberRepo;
     private final ModuleRepository             moduleRepo;
-    private final ModuleAssigneeRepository     assigneeRepo;
-    private final ModuleSubtaskRepository      subtaskRepo;
     private final AuditService                 auditService;
 
     // ── Projects ─────────────────────────────────────────────────────────────

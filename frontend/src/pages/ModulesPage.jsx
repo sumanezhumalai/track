@@ -4,6 +4,7 @@ import KanbanBoard from '@/components/kanban/KanbanBoard'
 import Sidebar from '@/components/Sidebar'
 
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { getStoredUser } from '@/lib/avatar'
 
 /**
  * ModulesPage — full-page Kanban board for a specific project.
@@ -14,15 +15,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 export default function ModulesPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
-
-  // Read role from localStorage (same pattern as rest of app)
-  const rawUser = localStorage.getItem('user')
-  let user = { name: 'User', role: 'DEV' }
-  if (rawUser) {
-    try { user = JSON.parse(rawUser) } catch { /* ignore */ }
-  }
-  const role = (user.role || '').toUpperCase().replace(/^ROLE_/, '')
-  const isAdmin = role === 'ADMIN'
+  const { isAdmin } = getStoredUser()
 
   const handleBack = () => navigate('/features')
 

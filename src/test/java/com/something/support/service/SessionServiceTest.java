@@ -30,7 +30,7 @@ class SessionServiceTest {
         when(repo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         TeamSession s = service.createSession(
-                new SessionRequest("devA", "aeB", null), "devA");
+                new SessionRequest("devA", "aeB", null), "devA", true);
 
         assertNotNull(s.getStartTime(), "startTime must be set server-side");
         assertNull(s.getEndTime(), "endTime must be null for a new session");

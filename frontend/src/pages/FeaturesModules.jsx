@@ -14,6 +14,7 @@ import NewProjectModal from '../components/NewProjectModal'
 import EditProjectModal from '../components/EditProjectModal'
 import BranchManagementModal from '../components/BranchManagementModal'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import { getStoredUser } from '../lib/avatar'
 
 export default function FeaturesModules() {
   const navigate = useNavigate()
@@ -31,17 +32,7 @@ export default function FeaturesModules() {
   const [projectForBranches, setProjectForBranches] = useState(null)
 
   // Auth / Role
-  const rawUser = localStorage.getItem('user')
-  let user = { name: 'User', role: 'DEV' }
-  if (rawUser) {
-    try {
-      user = JSON.parse(rawUser)
-    } catch {
-      // ignore
-    }
-  }
-  const role = (user.role || '').toUpperCase().replace(/^ROLE_/, '')
-  const isAdmin = role === 'ADMIN'
+  const { isAdmin } = getStoredUser()
 
   // Fetch all projects & parallel versions
   const fetchProjectsAndVersions = async () => {

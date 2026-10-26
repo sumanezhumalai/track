@@ -13,22 +13,12 @@ import {
 import api from '../api/axios'
 import egsLogo from '../assets/egs.png'
 import fingerprintSvg from '../assets/fingerprint.svg'
-import { getAvatarInitials } from '../lib/avatar'
+import { getAvatarInitials, getStoredUser } from '../lib/avatar'
 
 export default function Sidebar() {
   const navigate = useNavigate()
-  const rawUser = localStorage.getItem('user')
-  let user = { name: 'User', role: 'DEV' }
-  if (rawUser) {
-    try {
-      user = JSON.parse(rawUser)
-    } catch {
-      // ignore
-    }
-  }
-
-  const role = (user.role || '').toUpperCase().replace(/^ROLE_/, '')
-  const isAdmin = role === 'ADMIN'
+  const user = getStoredUser()
+  const isAdmin = user.isAdmin
 
   const handleLogout = async () => {
     try {

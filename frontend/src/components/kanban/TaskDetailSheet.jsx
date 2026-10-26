@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react'
-import { format } from 'date-fns'
 import {
   X,
   Calendar as CalendarIcon,
@@ -40,7 +39,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import UserListDialog from '@/components/kanban/UserListDialog'
 import { cn } from '@/lib/utils'
-import { getPriorityColor, calculateProgress } from '@/lib/taskUtils'
+import { getPriorityColor, calculateProgress, formatDate, toDateString } from '@/lib/taskUtils'
 import api from '@/api/axios'
 import { getAvatarInitials, getAvatarColorClass, normalizeUserData } from '@/lib/avatar'
 
@@ -54,16 +53,6 @@ function parseValidDate(dateInput) {
   if (!dateInput) return null
   const d = new Date(dateInput)
   return isNaN(d.getTime()) ? null : d
-}
-
-function safeFormatDate(dateInput, formatPattern, fallback = 'No date') {
-  const d = parseValidDate(dateInput)
-  if (!d) return fallback
-  try {
-    return format(d, formatPattern)
-  } catch {
-    return fallback
-  }
 }
 
 export default function TaskDetailSheet({
@@ -224,9 +213,7 @@ export default function TaskDetailSheet({
     if (!isAdmin) return
     setSaving(true)
     try {
-      const formattedDueDate = editData.dueDate && parseValidDate(editData.dueDate)
-        ? format(editData.dueDate, 'yyyy-MM-dd')
-        : null
+      const formattedDueDate = editData.dueDate ? toDateString(editData.dueDate) : null
 
       await api.put(`/kanban/modules/${task.id}`, {
         title: editData.title.trim(),
@@ -465,7 +452,7 @@ export default function TaskDetailSheet({
                   <PopoverTrigger asChild>
                     <Button variant='outline' className='w-[150px] h-9 justify-start text-left font-normal'>
                       <CalendarIcon className='mr-2 h-4 w-4' />
-                      {editData.dueDate ? safeFormatDate(editData.dueDate, 'MMM dd, yyyy', 'Pick a date') : <span>Pick a date</span>}
+                      {editData.dueDate ? formatDate(editData.dueDate, 'Pick a date') : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className='w-auto p-0' align='end'>
@@ -480,7 +467,7 @@ export default function TaskDetailSheet({
               ) : (
                 <Button variant='outline' className='w-[150px] h-9 justify-start text-left font-normal' disabled>
                   <CalendarIcon className='mr-2 h-4 w-4' />
-                  {dueDate ? safeFormatDate(dueDate, 'MMM dd, yyyy') : <span>No date</span>}
+                  {dueDate ? formatDate(dueDate, 'No date') : <span>No date</span>}
                 </Button>
               )}
             </div>

@@ -22,22 +22,15 @@ import {
 } from 'lucide-react'
 import LiveTimer from '../components/LiveTimer'
 import api from '../api/axios'
+import { getStoredUser } from '../lib/avatar'
 
 export default function Dashboard() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const rawUser = localStorage.getItem('user')
-  let user = { name: 'User', role: 'DEV' }
-  if (rawUser) {
-    try {
-      user = JSON.parse(rawUser)
-    } catch {
-      // ignore
-    }
-  }
-  const isAdmin = (user.role || '').toUpperCase().includes('ADMIN')
+  const user = getStoredUser()
+  const isAdmin = user.isAdmin
 
   const fetchSessions = async () => {
     setLoading(true)

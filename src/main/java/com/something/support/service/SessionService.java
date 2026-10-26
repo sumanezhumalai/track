@@ -35,11 +35,6 @@ public class SessionService {
     }
 
     @Transactional
-    public TeamSession createSession(SessionRequest req, String actor) {
-        return createSession(req, actor, true);
-    }
-
-    @Transactional
     public TeamSession createSession(SessionRequest req, String actor, boolean isAdmin) {
         if (!isAdmin && (req.devName() == null || !req.devName().equalsIgnoreCase(actor))) {
             throw new org.springframework.web.server.ResponseStatusException(
