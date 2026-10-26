@@ -61,6 +61,36 @@ public class ModuleService {
             module.setAssigneeDevNames(req.assigneeDevNames());
         }
 
+        // Persist initial checklist subtasks if provided
+        if (req.subtaskTexts() != null && !req.subtaskTexts().isEmpty()) {
+            java.util.List<ModuleSubtask> initialSubtasks = new java.util.ArrayList<>();
+            for (int i = 0; i < req.subtaskTexts().size(); i++) {
+                String text = req.subtaskTexts().get(i);
+                if (text != null && !text.isBlank()) {
+                    initialSubtasks.add(ModuleSubtask.builder()
+                            .module(module)
+                            .text(text.trim())
+                            .completed(false)
+                            .displayOrder(i)
+                            .createdAt(LocalDateTime.now())
+                            .updatedAt(LocalDateTime.now())
+                            .build());
+                }
+            }
+            if (!initialSubtasks.isEmpty()) {
+                java.util.List<ModuleSubtask> savedSubtasks = subtaskRepo.saveAll(initialSubtasks);
+                module.getSubtasks().addAll(savedSubtasks);
+                module.setSubtaskDtos(savedSubtasks.stream()
+                        .map(s -> new KanbanBoardResponse.SubtaskInfo(
+                                s.getSubtaskId(), s.getText(), s.isCompleted(), s.getDisplayOrder()))
+                        .toList());
+            } else {
+                module.setSubtaskDtos(java.util.List.of());
+            }
+        } else {
+            module.setSubtaskDtos(java.util.List.of());
+        }
+
         auditService.log(
                 "MODULE_CREATED: #" + module.getModuleId() + " in version " + versionId,
                 createdBy, "SUCCESS");
@@ -87,6 +117,11 @@ public class ModuleService {
 
         Module saved = moduleRepo.save(module);
         saved.setAssigneeDevNames(req.assigneeDevNames() != null ? req.assigneeDevNames() : module.getAssigneeDevNames());
+        List<ModuleSubtask> existingSubtasks = subtaskRepo.findAllByModule_ModuleIdOrderByDisplayOrderAsc(moduleId);
+        saved.setSubtaskDtos(existingSubtasks.stream()
+                .map(s -> new KanbanBoardResponse.SubtaskInfo(
+                        s.getSubtaskId(), s.getText(), s.isCompleted(), s.getDisplayOrder()))
+                .toList());
         auditService.log("MODULE_UPDATED: #" + moduleId, updatedBy, "SUCCESS");
         return saved;
     }
@@ -95,12 +130,25 @@ public class ModuleService {
 
     /**
      * Moves a card to a new column (status) and/or position.
-     * Called alongside reorderColumn for cross-column drags.
-     * For same-column reorder, use reorderColumn directly.
+     * Overload for internal callers / tests defaulting to admin privileges.
      */
     @Transactional
     public void moveModule(Long moduleId, ModuleStatus newStatus, int newPosition, String movedBy) {
+        moveModule(moduleId, newStatus, newPosition, movedBy, true);
+    }
+
+    /**
+     * Moves a card to a new column (status) and/or position with caller ownership check.
+     * Admin can move any module; developers can only move modules assigned to them.
+     */
+    @Transactional
+    public void moveModule(Long moduleId, ModuleStatus newStatus, int newPosition, String movedBy, boolean isAdmin) {
         Module module = getModuleOrThrow(moduleId);
+
+        if (!isAdmin && !isAssignedDev(module, movedBy)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to move this module");
+        }
+
         String previousState = module.getStatus().name() + "[" + module.getPosition() + "]";
 
         moduleRepo.updateStatusAndPosition(moduleId, newStatus, newPosition, LocalDateTime.now());
@@ -126,8 +174,10 @@ public class ModuleService {
     public void reorderColumn(ModuleReorderRequest req, String reorderedBy) {
         LocalDateTime now = LocalDateTime.now();
         List<Long> ids = req.orderedModuleIds();
-        for (int i = 0; i < ids.size(); i++) {
-            moduleRepo.updatePosition(ids.get(i), i, now);
+        if (ids != null) {
+            for (int i = 0; i < ids.size(); i++) {
+                moduleRepo.updateStatusAndPosition(ids.get(i), req.status(), i, now);
+            }
         }
         auditService.log(
                 "MODULE_REORDERED: column=" + req.status().name() + " version=" + req.versionId(),
@@ -177,16 +227,25 @@ public class ModuleService {
 
     @Transactional
     public ModuleSubtask toggleSubtask(Long subtaskId, String toggledBy) {
+        return toggleSubtask(subtaskId, toggledBy, true);
+    }
+
+    @Transactional
+    public ModuleSubtask toggleSubtask(Long subtaskId, String toggledBy, boolean isAdmin) {
         ModuleSubtask subtask = subtaskRepo.findById(subtaskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Subtask not found: " + subtaskId));
+
+        Module module = subtask.getModule();
+        if (!isAdmin && !isAssignedDev(module, toggledBy)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to update this subtask");
+        }
 
         subtask.setCompleted(!subtask.isCompleted());
         subtask.setUpdatedAt(LocalDateTime.now());
         ModuleSubtask saved = subtaskRepo.save(subtask);
 
         // Touch parent module updatedAt
-        Module module = subtask.getModule();
         module.setUpdatedAt(LocalDateTime.now());
         moduleRepo.save(module);
 
@@ -245,5 +304,11 @@ public class ModuleService {
 
         // Keep primary assignedTo in sync with first assignee in list
         module.setAssignedTo(devNames == null || devNames.isEmpty() ? null : devNames.get(0));
+    }
+
+    private boolean isAssignedDev(Module module, String devName) {
+        if (devName == null || devName.isBlank()) return false;
+        if (devName.equals(module.getAssignedTo())) return true;
+        return assigneeRepo.existsByModule_ModuleIdAndDevName(module.getModuleId(), devName);
     }
 }

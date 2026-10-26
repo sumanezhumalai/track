@@ -224,28 +224,51 @@ export default function KanbanBoard({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [highlightedTaskId, setHighlightedTaskId] = useState(null)
 
-  // Keep a ref to tasksByStatus for use in dnd callbacks without stale closure
+  // Keep refs for active states in intervals & callbacks without stale closures
   const tasksByStatusRef = useRef(tasksByStatus)
-  tasksByStatusRef.current = tasksByStatus
+  const isDraggingRef = useRef(false)
+  const activeVersionIdRef = useRef(activeVersionId)
+  const selectedTaskRef = useRef(selectedTask)
+  const userMapRef = useRef(userMap)
 
-  const loadBoard = useCallback(async (pid, vId) => {
-    setLoading(true)
+  useEffect(() => {
+    tasksByStatusRef.current = tasksByStatus
+  }, [tasksByStatus])
+
+  useEffect(() => {
+    activeVersionIdRef.current = activeVersionId
+  }, [activeVersionId])
+
+  useEffect(() => {
+    selectedTaskRef.current = selectedTask
+  }, [selectedTask])
+
+  useEffect(() => {
+    userMapRef.current = userMap
+  }, [userMap])
+
+  const loadBoard = useCallback(async (pid, vId, { silent = false } = {}) => {
+    if (!silent) {
+      setLoading(true)
+    }
     setError(null)
     try {
-      const params = vId ? `?versionId=${vId}` : ''
+      const targetVersionId = vId !== undefined && vId !== null ? vId : activeVersionIdRef.current
+      const params = targetVersionId ? `?versionId=${targetVersionId}` : ''
       const boardRes = await api.get(`/kanban/projects/${pid}/board${params}`)
       const board = boardRes.data
 
       // Try to get full user list (admin) for enrichment
-      let uMap = {}
+      let uMap = userMapRef.current || {}
       let enrichedDevUsers = []
       try {
         const usersRes = await api.get('/users/dev')
         const rawUsers = usersRes.data || []
         enrichedDevUsers = rawUsers.map(normalizeUserData)
         uMap = Object.fromEntries(enrichedDevUsers.map(u => [u.devName, u]))
+        userMapRef.current = uMap
       } catch {
-        // Dev user — 403 is expected, we'll use devName initials directly
+        // Dev user — 403 is expected, use existing userMap or initials
       }
 
       // Build project members list from board response memberDevNames
@@ -257,18 +280,69 @@ export default function KanbanBoard({
       setBoardData(board)
       setTasksByStatus(enriched)
       setProjectMembers(enrichedMembers)
-      setAllUsers(enrichedDevUsers)
-      setUserMap(uMap)
+      if (enrichedDevUsers.length > 0) {
+        setAllUsers(enrichedDevUsers)
+        setUserMap(uMap)
+      }
       setActiveVersionId(board.versionId)
+      activeVersionIdRef.current = board.versionId
+
+      // Keep open TaskDetailSheet in sync with latest server state
+      if (selectedTaskRef.current) {
+        const curId = String(selectedTaskRef.current.moduleId || selectedTaskRef.current.id)
+        const updatedSelected = Object.values(enriched).flat().find(t => t.id === curId)
+        if (updatedSelected) {
+          setSelectedTask(updatedSelected)
+        }
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not load board data.')
+      if (!silent) {
+        setError(err.response?.data?.message || 'Could not load board data.')
+      }
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }, [])
 
+  const syncBoardSilently = useCallback((vId) => {
+    if (!projectId) return
+    loadBoard(projectId, vId !== undefined && vId !== null ? vId : activeVersionIdRef.current, { silent: true })
+  }, [projectId, loadBoard])
+
+  // Initial load on projectId change
   useEffect(() => {
     if (projectId) loadBoard(projectId, null)
+  }, [projectId, loadBoard])
+
+  // Periodic 4-second background refresh with visibility awareness (silent, non-blinking)
+  useEffect(() => {
+    if (!projectId) return
+
+    const poll = () => {
+      if (document.hidden) return
+      if (isDraggingRef.current) return
+      loadBoard(projectId, activeVersionIdRef.current, { silent: true })
+    }
+
+    const intervalId = setInterval(poll, 4000)
+
+    // Immediate sync when user switches back to this tab or window
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden && !isDraggingRef.current) {
+        loadBoard(projectId, activeVersionIdRef.current, { silent: true })
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+    window.addEventListener('focus', handleVisibilityOrFocus)
+
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+      window.removeEventListener('focus', handleVisibilityOrFocus)
+    }
   }, [projectId, loadBoard])
 
   const handleVersionChange = (version) => {
@@ -291,41 +365,57 @@ export default function KanbanBoard({
       // Persist: POST /reorder
       try {
         await api.post('/kanban/modules/reorder', {
-          versionId: activeVersionId,
+          versionId: activeVersionIdRef.current,
           status: activeContainer,
           orderedModuleIds: newItems.map(t => parseInt(t.id, 10)),
         })
+        syncBoardSilently()
       } catch (err) {
         console.error('Reorder failed:', err)
         // Revert
         setTasksByStatus(prev => ({ ...prev, [activeContainer]: cols[activeContainer] }))
       }
     } else {
-      // Cross-column move
+      // Cross-column move: update status in item to prevent stale rollback
       const newActiveItems = [...(cols[activeContainer] || [])]
       const newOverItems = [...(cols[overContainer] || [])]
       const [item] = newActiveItems.splice(activeIndex, 1)
-      newOverItems.splice(overIndex, 0, item)
+      const updatedItem = { ...item, status: overContainer }
+      newOverItems.splice(overIndex, 0, updatedItem)
+
       setTasksByStatus(prev => ({
         ...prev,
         [activeContainer]: newActiveItems,
         [overContainer]: newOverItems,
       }))
 
-      // Persist: PATCH /move
+      // Persist: PATCH /move + reorder BOTH columns
       try {
         await api.patch(`/kanban/modules/${movedTask.id}/move`, {
           status: overContainer,
           position: overIndex,
         })
-        // Also persist source column reorder
+        const reorderPromises = []
         if (newActiveItems.length > 0) {
-          await api.post('/kanban/modules/reorder', {
-            versionId: activeVersionId,
-            status: activeContainer,
-            orderedModuleIds: newActiveItems.map(t => parseInt(t.id, 10)),
-          })
+          reorderPromises.push(
+            api.post('/kanban/modules/reorder', {
+              versionId: activeVersionIdRef.current,
+              status: activeContainer,
+              orderedModuleIds: newActiveItems.map(t => parseInt(t.id, 10)),
+            })
+          )
         }
+        if (newOverItems.length > 0) {
+          reorderPromises.push(
+            api.post('/kanban/modules/reorder', {
+              versionId: activeVersionIdRef.current,
+              status: overContainer,
+              orderedModuleIds: newOverItems.map(t => parseInt(t.id, 10)),
+            })
+          )
+        }
+        await Promise.all(reorderPromises)
+        syncBoardSilently()
       } catch (err) {
         console.error('Move failed:', err)
         // Revert
@@ -336,7 +426,7 @@ export default function KanbanBoard({
         }))
       }
     }
-  }, [activeVersionId])
+  }, [syncBoardSilently])
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
@@ -347,7 +437,7 @@ export default function KanbanBoard({
     if (isRefreshing || loading) return
     setIsRefreshing(true)
     try {
-      await loadBoard(projectId, activeVersionId)
+      await loadBoard(projectId, activeVersionIdRef.current, { silent: true })
     } finally {
       setIsRefreshing(false)
     }
@@ -368,6 +458,7 @@ export default function KanbanBoard({
       const enrichedTask = {
         ...updatedTask,
         id: updatedId,
+        status: targetCol,
         assignees: (updatedTask.assigneeDevNames ?? selectedTask?.assigneeDevNames ?? []).map(devName => {
           return userMap[devName] || normalizeUserData(devName)
         }),
@@ -396,9 +487,12 @@ export default function KanbanBoard({
     })
 
     // Keep detail sheet task in sync
-    if (selectedTask?.id === updatedId) {
+    if (selectedTask?.id === updatedId || selectedTask?.moduleId === updatedTask.moduleId) {
       setSelectedTask(prev => ({ ...prev, ...updatedTask, id: updatedId }))
     }
+
+    // Action-wise silent sync with server
+    syncBoardSilently()
   }
 
   // Called when admin deletes a task from detail sheet
@@ -410,6 +504,9 @@ export default function KanbanBoard({
       })
       return newState
     })
+    setIsDetailOpen(false)
+    setSelectedTask(null)
+    syncBoardSilently()
   }
 
   // Called when admin creates a new module
@@ -427,6 +524,7 @@ export default function KanbanBoard({
       ...prev,
       [status]: [enrichedTask, ...(prev[status] || [])],
     }))
+    syncBoardSilently()
   }
 
   const handleAddMember = async (user) => {
@@ -440,6 +538,7 @@ export default function KanbanBoard({
       setProjectMembers(prev =>
         prev.some(m => (m.devName || m.name) === devName) ? prev : [...prev, normalized]
       )
+      syncBoardSilently()
     } catch (err) {
       console.error('Failed to add member:', err)
     }
@@ -500,6 +599,8 @@ export default function KanbanBoard({
           onValueChange={setTasksByStatus}
           getItemValue={item => item.id}
           onMove={handleMove}
+          onDragStart={() => { isDraggingRef.current = true }}
+          onDragEnd={() => { isDraggingRef.current = false }}
           className='h-full'
         >
           <KanbanBoardUI className='h-full grid auto-rows-fr grid-cols-[repeat(3,minmax(18rem,1fr))] gap-4'>

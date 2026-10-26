@@ -52,11 +52,13 @@ public class SecurityConfig {
 
                 // ── Kanban: module admin actions ──────────────────────────────
                 .requestMatchers(HttpMethod.POST,   "/api/kanban/modules").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/kanban/modules/*/subtasks").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/kanban/modules/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT,    "/api/kanban/modules/*/assignees").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/kanban/modules/*").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/kanban/modules/subtasks/*").hasRole("ADMIN")
 
-                // ── Kanban: dev actions (move, reorder, subtasks) ─────────────
+                // ── Kanban: dev actions (move, reorder, subtasks toggle) ─────
                 .requestMatchers("/api/kanban/**").authenticated()
 
                 .requestMatchers("/api/**").authenticated()

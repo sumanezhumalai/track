@@ -86,6 +86,7 @@ public class Module {
 
     /** Full multi-assignee list shown in the detail sheet */
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ModuleAssignee> moduleAssignees = new ArrayList<>();
@@ -93,6 +94,7 @@ public class Module {
     /** Checklist sub-items — ordered by displayOrder ASC */
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ModuleSubtask> subtasks = new ArrayList<>();
@@ -107,6 +109,23 @@ public class Module {
         }
         if (moduleAssignees != null && org.hibernate.Hibernate.isInitialized(moduleAssignees)) {
             return moduleAssignees.stream().map(ModuleAssignee::getDevName).toList();
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("subtasks")
+    private List<com.something.support.dto.KanbanBoardResponse.SubtaskInfo> subtaskDtos;
+
+    public List<com.something.support.dto.KanbanBoardResponse.SubtaskInfo> getSubtaskDtos() {
+        if (subtaskDtos != null) {
+            return subtaskDtos;
+        }
+        if (subtasks != null && org.hibernate.Hibernate.isInitialized(subtasks)) {
+            return subtasks.stream()
+                    .map(s -> new com.something.support.dto.KanbanBoardResponse.SubtaskInfo(
+                            s.getSubtaskId(), s.getText(), s.isCompleted(), s.getDisplayOrder()))
+                    .toList();
         }
         return java.util.Collections.emptyList();
     }

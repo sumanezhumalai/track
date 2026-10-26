@@ -15,5 +15,6 @@ public record ModuleRequest(
         String priority,           // "low" | "medium" | "high"
         String assignedTo,         // primary assignee dev_name (nullable = unassigned)
         List<String> assigneeDevNames, // full multi-assignee list for detail sheet
-        LocalDate dueDate
+        LocalDate dueDate,
+        List<String> subtaskTexts  // initial checklist items on creation
 ) {}

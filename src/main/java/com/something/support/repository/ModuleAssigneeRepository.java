@@ -14,6 +14,8 @@ public interface ModuleAssigneeRepository extends JpaRepository<ModuleAssignee, 
 
     Optional<ModuleAssignee> findByModule_ModuleIdAndDevName(Long moduleId, String devName);
 
+    boolean existsByModule_ModuleIdAndDevName(Long moduleId, String devName);
+
     void deleteAllByModule_ModuleId(Long moduleId);
 
     /**

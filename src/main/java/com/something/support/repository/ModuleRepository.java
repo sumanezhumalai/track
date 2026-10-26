@@ -30,6 +30,17 @@ public interface ModuleRepository extends JpaRepository<Module, Long> {
             Long versionId, String devName);
 
     /**
+     * Dev view — all modules where the dev is an assignee (either primary assignedTo or in module_assignee).
+     */
+    @Query("SELECT m FROM Module m WHERE m.version.versionId = :versionId AND (" +
+           "m.assignedTo = :devName OR " +
+           "EXISTS (SELECT 1 FROM ModuleAssignee ma WHERE ma.module = m AND ma.devName = :devName)" +
+           ") ORDER BY m.status ASC, m.position ASC")
+    List<Module> findAllAssignedToDevInVersion(
+            @Param("versionId") Long versionId,
+            @Param("devName") String devName);
+
+    /**
      * Highest position in a column — used to append new cards at the bottom.
      * Returns null if the column is empty (no modules in that status yet).
      */

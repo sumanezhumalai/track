@@ -199,7 +199,7 @@ export default function TaskDetailSheet({
     try {
       await api.patch(`/kanban/modules/${task.id}/move`, {
         status: newStatus,
-        position: task.position ?? 0,
+        position: 0,
       })
       onTaskUpdate?.({ ...task, status: newStatus }, { highlight: true })
     } catch {

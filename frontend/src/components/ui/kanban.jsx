@@ -79,6 +79,8 @@ function Kanban({
   render,
   onMove,
   modifiers,
+  onDragStart: onDragStartProp,
+  onDragEnd: onDragEndProp,
   ...props
 }) {
   const columns = value
@@ -116,7 +118,8 @@ function Kanban({
 
   const handleDragStart = useCallback((event) => {
     setActiveId(event.active.id)
-  }, [])
+    onDragStartProp?.(event)
+  }, [onDragStartProp])
 
   const dragOverRafRef = useRef(null)
   const pendingDragOverRef = useRef(null)
@@ -173,7 +176,8 @@ function Kanban({
   const handleDragCancel = useCallback(() => {
     flushPendingDragOver()
     setActiveId(null)
-  }, [flushPendingDragOver])
+    onDragEndProp?.(null)
+  }, [flushPendingDragOver, onDragEndProp])
 
   const handleDragEnd = useCallback(
     (event) => {
@@ -182,6 +186,7 @@ function Kanban({
       const { active, over } = event
 
       setActiveId(null)
+      onDragEndProp?.(event)
 
       if (!over) return
 
@@ -258,7 +263,7 @@ function Kanban({
 
       setColumns({ ...cols, [activeContainer]: newActiveItems, [overContainer]: newOverItems })
     },
-    [findContainer, isColumn, setColumns, flushPendingDragOver]
+    [findContainer, isColumn, setColumns, flushPendingDragOver, onDragEndProp]
   )
 
   const stableGetItemId = useCallback((item) => getItemValueRef.current(item), [])

@@ -233,11 +233,10 @@ public class ProjectService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this project");
         }
 
-        // Load modules — admin sees all, dev sees only assigned
+        // Load modules — admin sees all, dev sees only assigned (primary or collaborative)
         List<Module> modules = isAdmin
                 ? moduleRepo.findAllByVersion_VersionIdOrderByStatusAscPositionAsc(version.getVersionId())
-                : moduleRepo.findAllByVersion_VersionIdAndAssignedToOrderByStatusAscPositionAsc(
-                        version.getVersionId(), devName);
+                : moduleRepo.findAllAssignedToDevInVersion(version.getVersionId(), devName);
 
         // Group into columns keyed by status name
         Map<String, List<KanbanBoardResponse.ModuleCardResponse>> columns = modules.stream()
