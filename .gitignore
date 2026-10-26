@@ -1,7 +1,4 @@
-HELP.md
 target/
-kanbanUI/
-.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
@@ -36,6 +33,3 @@ build/
 frontend/node_modules/
 frontend/node/
 frontend/dist/
-.superpowers/
-instruction.md
-

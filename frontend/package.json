@@ -27,7 +27,6 @@
     "lucide-react": "^1.59.0",
     "react": "^19.2.8",
     "react-aria-components": "^1.22.1",
-    "react-day-picker": "^10.0.2",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.10.1",
