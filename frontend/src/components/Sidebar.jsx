@@ -13,6 +13,7 @@ import {
 import api from '../api/axios'
 import egsLogo from '../assets/egs.png'
 import fingerprintSvg from '../assets/fingerprint.svg'
+import { getAvatarInitials } from '../lib/avatar'
 
 export default function Sidebar() {
   const navigate = useNavigate()
@@ -40,15 +41,7 @@ export default function Sidebar() {
     }
   }
 
-  const getInitials = (name) => {
-    if (!name) return 'U'
-    return name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
+  const getInitials = (name) => getAvatarInitials(name)
 
   return (
     <aside className="w-60 bg-white border-r border-gh-border h-full flex flex-col justify-between shrink-0 select-none z-10 relative overflow-hidden">

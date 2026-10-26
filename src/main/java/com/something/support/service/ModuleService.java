@@ -59,6 +59,7 @@ public class ModuleService {
         // Sync multi-assignee list
         if (req.assigneeDevNames() != null && !req.assigneeDevNames().isEmpty()) {
             syncAssignees(module, req.assigneeDevNames(), createdBy);
+            module.setAssigneeDevNames(req.assigneeDevNames());
         }
 
         auditService.log(
@@ -82,9 +83,11 @@ public class ModuleService {
 
         if (req.assigneeDevNames() != null) {
             syncAssignees(module, req.assigneeDevNames(), updatedBy);
+            module.setAssigneeDevNames(req.assigneeDevNames());
         }
 
         Module saved = moduleRepo.save(module);
+        saved.setAssigneeDevNames(req.assigneeDevNames() != null ? req.assigneeDevNames() : module.getAssigneeDevNames());
         auditService.log("MODULE_UPDATED: #" + moduleId, updatedBy, "SUCCESS");
         return saved;
     }

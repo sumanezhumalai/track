@@ -87,11 +87,27 @@ public class Module {
     /** Full multi-assignee list shown in the detail sheet */
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ModuleAssignee> moduleAssignees = new ArrayList<>();
 
     /** Checklist sub-items — ordered by displayOrder ASC */
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC")
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ModuleSubtask> subtasks = new ArrayList<>();
+
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonProperty("assigneeDevNames")
+    private List<String> assigneeDevNames;
+
+    public List<String> getAssigneeDevNames() {
+        if (assigneeDevNames != null) {
+            return assigneeDevNames;
+        }
+        if (moduleAssignees != null && org.hibernate.Hibernate.isInitialized(moduleAssignees)) {
+            return moduleAssignees.stream().map(ModuleAssignee::getDevName).toList();
+        }
+        return java.util.Collections.emptyList();
+    }
 }

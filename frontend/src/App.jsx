@@ -5,6 +5,7 @@ import SetPassword from './pages/SetPassword'
 import Dashboard from './pages/Dashboard'
 import Sessions from './pages/Sessions'
 import FeaturesModules from './pages/FeaturesModules'
+import ModulesPage from './pages/ModulesPage'
 import UserManagement from './pages/UserManagement'
 import TeamAnalytics from './pages/TeamAnalytics'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -32,6 +33,14 @@ export default function App() {
             <AppLayout>
               <FeaturesModules />
             </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/features/:projectId/modules"
+        element={
+          <ProtectedRoute>
+            <ModulesPage />
           </ProtectedRoute>
         }
       />

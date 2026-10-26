@@ -17,6 +17,7 @@ import {
   Clock,
 } from 'lucide-react'
 import api from '../api/axios'
+import { getAvatarInitials } from '../lib/avatar'
 
 export default function UserManagement() {
   const [activeTab, setActiveTab] = useState('DEV') // 'DEV' | 'AE'
@@ -328,7 +329,7 @@ export default function UserManagement() {
                                   : 'bg-emerald-100/70 text-emerald-800'
                               }`}
                             >
-                              {name ? name.slice(0, 2).toUpperCase() : 'U'}
+                              {getAvatarInitials(name)}
                             </div>
                             <div>
                               <div className="font-bold text-gh-text">{name}</div>

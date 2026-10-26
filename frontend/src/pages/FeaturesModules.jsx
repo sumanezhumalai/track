@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Layers,
   Plus,
@@ -6,8 +7,6 @@ import {
   Search,
   AlertCircle,
   FolderGit2,
-  Info,
-  X,
 } from 'lucide-react'
 import api from '../api/axios'
 import ProjectCard from '../components/ProjectCard'
@@ -17,6 +16,7 @@ import BranchManagementModal from '../components/BranchManagementModal'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 
 export default function FeaturesModules() {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [versionsMap, setVersionsMap] = useState({})
   const [loading, setLoading] = useState(true)
@@ -29,9 +29,6 @@ export default function FeaturesModules() {
   const [projectToDelete, setProjectToDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [projectForBranches, setProjectForBranches] = useState(null)
-
-  // Informational Toast for Phase 2 board hook
-  const [previewToast, setPreviewToast] = useState(null)
 
   // Auth / Role
   const rawUser = localStorage.getItem('user')
@@ -97,14 +94,9 @@ export default function FeaturesModules() {
     }
   }
 
-  // Handle onSelectProject (Phase 2 preview notice)
-  const handleSelectProject = (project, activeVersion) => {
-    const versionLabel =
-      activeVersion?.label ||
-      (activeVersion ? `v${activeVersion.versionNumber}.0.0` : 'v1.0.0')
-    setPreviewToast(
-      `Kanban Board for "${project.projectName}" (${versionLabel}) will be connected in Phase 2.`
-    )
+  // Navigate to Kanban board for the project's active version
+  const handleSelectProject = (project) => {
+    navigate(`/features/${project.projectId}/modules`)
   }
 
   // Filtered projects
@@ -178,22 +170,6 @@ export default function FeaturesModules() {
         <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
           <span>{error}</span>
-        </div>
-      )}
-
-      {/* Preview Toast for Phase 2 */}
-      {previewToast && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-lg text-emerald-900 text-xs flex items-center justify-between shadow-sm animate-in fade-in duration-150">
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span>{previewToast}</span>
-          </div>
-          <button
-            onClick={() => setPreviewToast(null)}
-            className="text-emerald-700 hover:text-emerald-900 p-1"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
         </div>
       )}
 
