@@ -54,10 +54,6 @@ public class SessionService {
         return saved;
     }
 
-    @Transactional
-    public TeamSession updateSession(Long id, SessionRequest req, String actor) {
-        return updateSession(id, req, actor, true);
-    }
 
     @Transactional
     public TeamSession updateSession(Long id, SessionRequest req, String actor, boolean isAdmin) {
@@ -101,10 +97,6 @@ public class SessionService {
         return saved;
     }
 
-    @Transactional
-    public void deleteSession(Long id, String actor) {
-        deleteSession(id, actor, true);
-    }
 
     @Transactional
     public void deleteSession(Long id, String actor, boolean isAdmin) {

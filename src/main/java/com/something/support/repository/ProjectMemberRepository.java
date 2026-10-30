@@ -18,4 +18,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
 
     /** Access guard — checks if a dev is an active member of a project */
     boolean existsByProject_ProjectIdAndDevNameAndIsActiveTrue(Long projectId, String devName);
+
+    /** Count active projects where dev is an active member */
+    long countByDevNameAndIsActiveTrue(String devName);
 }

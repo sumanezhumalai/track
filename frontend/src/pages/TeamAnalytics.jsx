@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
   BarChart,
   Bar,
@@ -27,6 +27,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import api from '../api/axios'
+import ModulesAnalyticsView from '../components/analytics/ModulesAnalyticsView'
 
 // Greenhouse harmonious greens and complementary chart palette
 const GREEN_PALETTE = [
@@ -41,9 +42,19 @@ const GREEN_PALETTE = [
 ]
 
 export default function TeamAnalytics() {
+  const modulesAnalyticsRef = useRef(null)
+  const [analyticsType, setAnalyticsType] = useState(() => {
+    return localStorage.getItem('egs_analytics_active_tab') || 'modules'
+  })
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [modulesAnalyticsLoading, setModulesAnalyticsLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const handleTabChange = (type) => {
+    setAnalyticsType(type)
+    localStorage.setItem('egs_analytics_active_tab', type)
+  }
 
   // Date filters
   const [preset, setPreset] = useState('MONTH') // 'WEEK' | 'MONTH' | 'ALL' | 'CUSTOM'
@@ -104,6 +115,16 @@ export default function TeamAnalytics() {
     setPreset('CUSTOM')
     fetchAnalytics(fromDate, toDate)
   }
+
+  const handleRefresh = () => {
+    if (analyticsType === 'modules') {
+      modulesAnalyticsRef.current?.refresh()
+    } else {
+      fetchAnalytics(fromDate, toDate)
+    }
+  }
+
+  const isRefreshing = analyticsType === 'modules' ? modulesAnalyticsLoading : loading
 
   // Analytics Computations
   const stats = useMemo(() => {
@@ -219,58 +240,83 @@ export default function TeamAnalytics() {
             <span className="badge-role">Admin</span>
           </div>
           <p className="text-xs text-stone-500 mt-0.5">
-            Operational throughput, support delivery hours, and collaboration metrics.
+            {analyticsType === 'modules'
+              ? 'Multi-dimensional engineering telemetry, cycle time, priority distribution, and velocity.'
+              : 'Operational throughput, support delivery hours, and collaboration metrics.'}
           </p>
         </div>
 
-        <button
-          onClick={() => fetchAnalytics(fromDate, toDate)}
-          disabled={loading}
-          className="btn-secondary self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Data</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Unified Segmented Switcher */}
+          <div className="segmented-control">
+            <button
+              type="button"
+              onClick={() => handleTabChange('modules')}
+              className={analyticsType === 'modules' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Features & Modules
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('sessions')}
+              className={analyticsType === 'sessions' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Support Sessions
+            </button>
+          </div>
+
+          {/* Universal Refresh Button */}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="btn-secondary"
+            title="Refresh analytics telemetry"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
-      {error && (
-        <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-          <span>{error}</span>
-        </div>
-      )}
+      {/* Analytics Content Views with Hardware-Accelerated Smooth Transition & Keep-Alive */}
+      <div className={analyticsType === 'modules' ? 'animate-view-fade-in block' : 'hidden'}>
+        <ModulesAnalyticsView ref={modulesAnalyticsRef} onLoadingChange={setModulesAnalyticsLoading} />
+      </div>
 
-      {/* Date Filter Toolbar (Integrated, Zero Box Shadows) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 bg-stone-100/70 p-0.5 rounded-md border border-stone-200/50 self-start lg:self-auto">
-          <button
-            onClick={() => applyPreset('WEEK')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${preset === 'WEEK'
-                ? 'bg-white text-stone-900 font-semibold shadow-sm'
-                : 'text-stone-500 hover:text-stone-900'
-              }`}
-          >
-            Past 7 Days
-          </button>
-          <button
-            onClick={() => applyPreset('MONTH')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${preset === 'MONTH'
-                ? 'bg-white text-stone-900 font-semibold shadow-sm'
-                : 'text-stone-500 hover:text-stone-900'
-              }`}
-          >
-            Past 30 Days
-          </button>
-          <button
-            onClick={() => applyPreset('ALL')}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${preset === 'ALL'
-                ? 'bg-white text-stone-900 font-semibold shadow-sm'
-                : 'text-stone-500 hover:text-stone-900'
-              }`}
-          >
-            All Time
-          </button>
-        </div>
+      <div className={analyticsType === 'sessions' ? 'animate-view-fade-in block space-y-6' : 'hidden'}>
+        {error && (
+          <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Date Filter Toolbar (Integrated, Zero Box Shadows) */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="segmented-control self-start lg:self-auto">
+            <button
+              type="button"
+              onClick={() => applyPreset('WEEK')}
+              className={preset === 'WEEK' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Past 7 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('MONTH')}
+              className={preset === 'MONTH' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Past 30 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset('ALL')}
+              className={preset === 'ALL' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              All Time
+            </button>
+          </div>
 
         <form onSubmit={handleCustomFilterSubmit} className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-stone-400 font-medium">Custom:</span>
@@ -526,6 +572,7 @@ export default function TeamAnalytics() {
             </table>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

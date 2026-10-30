@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import {
   X,
-  Calendar as CalendarIcon,
   Plus,
   ListTodo,
   Edit2,
@@ -18,25 +17,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import UserListDialog from '@/components/kanban/UserListDialog'
 import { cn } from '@/lib/utils'
 import { getPriorityColor, calculateProgress, formatDate, toDateString } from '@/lib/taskUtils'
@@ -44,6 +25,7 @@ import api from '@/api/axios'
 import { getAvatarInitials, getAvatarColorClass, normalizeUserData } from '@/lib/avatar'
 
 const COLUMN_CONFIG = {
+  ToBeDone:   { label: 'To Be Done' },
   start:      { label: 'Start' },
   testing:    { label: 'Testing' },
   production: { label: 'Production' },
@@ -66,7 +48,7 @@ export default function TaskDetailSheet({
 }) {
   const [subtasks, setSubtasks] = useState([])
   const [newSubtask, setNewSubtask] = useState('')
-  const [status, setStatus] = useState('start')
+  const [status, setStatus] = useState('ToBeDone')
   const [isEditMode, setIsEditMode] = useState(false)
   const [editData, setEditData] = useState({
     title: '',
@@ -98,7 +80,7 @@ export default function TaskDetailSheet({
       lastTaskIdRef.current = taskId
       setIsEditMode(false)
       setNewSubtask('')
-      setStatus(task.status ?? 'start')
+      setStatus(task.status ?? 'ToBeDone')
       setSubtasks(task.subtasks ?? [])
       setEditData({
         title: task.title ?? '',
@@ -359,10 +341,10 @@ export default function TaskDetailSheet({
           {isEditMode ? (
             <div className='space-y-1'>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>Title</label>
-              <Input
+              <input
                 value={editData.title}
                 onChange={e => setEditData(d => ({ ...d, title: e.target.value }))}
-                className='text-base font-semibold'
+                className='input text-base font-semibold'
                 placeholder='Module title'
               />
             </div>
@@ -374,10 +356,10 @@ export default function TaskDetailSheet({
           {isEditMode ? (
             <div className='space-y-1'>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>Description</label>
-              <Textarea
+              <textarea
                 value={editData.description}
                 onChange={e => setEditData(d => ({ ...d, description: e.target.value }))}
-                className='min-h-[80px] resize-none text-sm'
+                className='input min-h-[80px] resize-none text-sm py-2'
                 placeholder='Add a description...'
               />
             </div>
@@ -393,22 +375,22 @@ export default function TaskDetailSheet({
             <div className='flex items-center justify-between'>
               <span className='text-sm text-muted-foreground'>Status</span>
               {isAdmin ? (
-                <Select value={status} onValueChange={handleStatusChange} disabled={savingStatus}>
-                  <SelectTrigger className='w-[150px] h-9'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(COLUMN_CONFIG).map(([key, col]) => (
-                      <SelectItem key={key} value={key}>
-                        {col.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={status}
+                  onChange={e => handleStatusChange(e.target.value)}
+                  disabled={savingStatus}
+                  className='input w-[150px] h-9 text-xs'
+                >
+                  {Object.entries(COLUMN_CONFIG).map(([key, col]) => (
+                    <option key={key} value={key}>
+                      {col.label}
+                    </option>
+                  ))}
+                </select>
               ) : (
-                <Badge variant='outline' className='capitalize px-3 py-1 font-medium text-xs'>
+                <span className='capitalize px-3 py-1 font-medium text-xs rounded border border-stone-200 bg-stone-50 text-stone-700'>
                   {COLUMN_CONFIG[status]?.label || status}
-                </Badge>
+                </span>
               )}
             </div>
 
@@ -416,26 +398,18 @@ export default function TaskDetailSheet({
             <div className='flex items-center justify-between'>
               <span className='text-sm text-muted-foreground'>Priority</span>
               {isEditMode ? (
-                <Select value={editData.priority} onValueChange={v => setEditData(d => ({ ...d, priority: v }))}>
-                  <SelectTrigger className='w-[150px] h-9'>
-                    <SelectValue>
-                      <div className='flex items-center gap-2'>
-                        <span className={cn('h-2 w-2 rounded-full', getPriorityColor(editData.priority))} />
-                        <span className='capitalize'>{editData.priority}</span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className='relative flex items-center'>
+                  <span className={cn('absolute left-2.5 h-2 w-2 rounded-full pointer-events-none', getPriorityColor(editData.priority))} />
+                  <select
+                    value={editData.priority}
+                    onChange={e => setEditData(d => ({ ...d, priority: e.target.value }))}
+                    className='input w-[150px] h-9 text-xs pl-6 capitalize'
+                  >
                     {['low', 'medium', 'high'].map(p => (
-                      <SelectItem key={p} value={p}>
-                        <div className='flex items-center gap-2'>
-                          <span className={cn('h-2 w-2 rounded-full', getPriorityColor(p))} />
-                          <span className='capitalize'>{p}</span>
-                        </div>
-                      </SelectItem>
+                      <option key={p} value={p}>{p}</option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                </div>
               ) : (
                 <div className='flex items-center gap-2'>
                   <span className={cn('h-2 w-2 rounded-full', getPriorityColor(task.priority))} />
@@ -448,27 +422,16 @@ export default function TaskDetailSheet({
             <div className='flex items-center justify-between'>
               <span className='text-sm text-muted-foreground'>Due date</span>
               {isEditMode ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant='outline' className='w-[150px] h-9 justify-start text-left font-normal'>
-                      <CalendarIcon className='mr-2 h-4 w-4' />
-                      {editData.dueDate ? formatDate(editData.dueDate, 'Pick a date') : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0' align='end'>
-                    <Calendar
-                      selected={editData.dueDate}
-                      onSelect={date => setEditData(d => ({ ...d, dueDate: date || null }))}
-                      captionLayout='dropdown'
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <input
+                  type='date'
+                  value={toDateString(editData.dueDate) || ''}
+                  onChange={e => setEditData(d => ({ ...d, dueDate: e.target.value ? new Date(e.target.value) : null }))}
+                  className='input w-[150px] h-9 text-xs'
+                />
               ) : (
-                <Button variant='outline' className='w-[150px] h-9 justify-start text-left font-normal' disabled>
-                  <CalendarIcon className='mr-2 h-4 w-4' />
-                  {dueDate ? formatDate(dueDate, 'No date') : <span>No date</span>}
-                </Button>
+                <span className='text-sm font-medium text-stone-700'>
+                  {dueDate ? formatDate(dueDate, 'No date') : 'No date'}
+                </span>
               )}
             </div>
 
@@ -536,7 +499,12 @@ export default function TaskDetailSheet({
                 <span className='text-sm text-muted-foreground'>Progress</span>
                 <span className='text-sm font-medium'>{progress}%</span>
               </div>
-              <Progress value={progress} className='h-2' />
+              <div className='h-2 w-full bg-stone-100 rounded-full overflow-hidden'>
+                <div
+                  className='h-full bg-emerald-600 transition-all duration-300'
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
           </div>
 
@@ -546,7 +514,7 @@ export default function TaskDetailSheet({
               <div className='flex items-center gap-2'>
                 <ListTodo className='h-4 w-4 text-muted-foreground' />
                 <span className='text-sm font-semibold'>Subtasks</span>
-                <Badge variant='secondary' className='h-5 text-xs'>{totalSubtasks}</Badge>
+                <span className='h-5 px-1.5 py-0.5 rounded text-xs bg-stone-100 text-stone-600 font-medium'>{totalSubtasks}</span>
               </div>
               <span className='text-xs text-muted-foreground'>
                 {completedSubtasks} of {totalSubtasks} done
@@ -561,10 +529,12 @@ export default function TaskDetailSheet({
               ) : (
                 subtasks.map((subtask) => (
                   <div key={subtask.id} className='flex items-center gap-3 group rounded-md p-1.5 hover:bg-muted/40 transition-colors'>
-                    <Checkbox
+                    <input
+                      type='checkbox'
                       checked={subtask.completed}
-                      onCheckedChange={() => handleToggleSubtask(subtask)}
+                      onChange={() => handleToggleSubtask(subtask)}
                       aria-label={subtask.text}
+                      className='h-4 w-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer'
                     />
                     <span
                       className={cn(
@@ -595,12 +565,12 @@ export default function TaskDetailSheet({
               {/* Add Subtask — Admin only */}
               {isAdmin && (
                 <div className='flex items-center gap-2 pt-1'>
-                  <Input
+                  <input
                     placeholder='Add a subtask...'
                     value={newSubtask}
                     onChange={e => setNewSubtask(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask() } }}
-                    className='h-9 text-sm'
+                    className='input h-9 text-sm flex-1'
                   />
                   <Button
                     size='icon'

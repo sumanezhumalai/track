@@ -1,16 +1,8 @@
 // Shared utility functions for task management
 
+const PRIORITY_COLORS = { high: 'bg-rose-500', medium: 'bg-amber-500', low: 'bg-slate-400' }
 export function getPriorityColor(priority) {
-  switch (priority) {
-    case 'high':
-      return 'bg-rose-500'
-    case 'medium':
-      return 'bg-amber-500'
-    case 'low':
-      return 'bg-slate-400'
-    default:
-      return 'bg-slate-400'
-  }
+  return PRIORITY_COLORS[priority] || 'bg-slate-400'
 }
 
 export function getPriorityStyles(priority) {
@@ -45,9 +37,5 @@ export function formatDate(dateInput, fallback = '') {
 export function toDateString(dateInput) {
   if (!dateInput) return null
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput)
-  if (isNaN(d.getTime())) return null
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return isNaN(d.getTime()) ? null : d.toLocaleDateString('en-CA')
 }

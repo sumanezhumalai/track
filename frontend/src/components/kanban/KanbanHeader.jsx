@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import ProjectBreadcrumb from '@/components/kanban/ProjectBreadcrumb'
 import TeamAvatarGroup from '@/components/kanban/TeamAvatarGroup'
@@ -17,19 +16,11 @@ export default function KanbanHeader({
   onBack,
   onVersionChange,
   isAdmin = false,
+  selectedMemberDevNames = [],
+  onToggleMemberFilter,
+  onClearMemberFilter,
 }) {
-  const [version, setVersion] = useState('')
-
-  useEffect(() => {
-    if (activeVersion) {
-      setVersion(activeVersion.label || `v${activeVersion.versionNumber}`)
-    }
-  }, [activeVersion])
-
-  const handleVersionChange = (v) => {
-    setVersion(v.label || `v${v.versionNumber}`)
-    onVersionChange?.(v)
-  }
+  const version = activeVersion ? (activeVersion.label || `v${activeVersion.versionNumber}`) : ''
 
   return (
     <div className='flex h-16 shrink-0 items-center justify-between border-b bg-background px-6 gap-4'>
@@ -46,7 +37,7 @@ export default function KanbanHeader({
           projectName={project?.projectName ?? ''}
           version={version}
           versions={project?.allVersions ?? []}
-          onVersionChange={handleVersionChange}
+          onVersionChange={onVersionChange}
           onBack={onBack}
         />
       </div>
@@ -57,6 +48,9 @@ export default function KanbanHeader({
           users={users}
           onAddMember={onAddMember}
           isAdmin={isAdmin}
+          selectedMemberDevNames={selectedMemberDevNames}
+          onToggleMemberFilter={onToggleMemberFilter}
+          onClearMemberFilter={onClearMemberFilter}
         />
 
         <button

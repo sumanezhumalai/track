@@ -300,10 +300,34 @@ class KanbanOperationsTest {
 
         // Verify that moduleId status is now 'start' and position is 0
         HttpResponse<String> finalBoardResp = adminClient.send(getBoardReq, HttpResponse.BodyHandlers.ofString());
-        JsonNode finalStartCards = mapper.readTree(finalBoardResp.body()).get("columns").get("start");
+        JsonNode finalBoard = mapper.readTree(finalBoardResp.body());
+        assertTrue(finalBoard.get("columns").has("ToBeDone"), "Board response must contain 'ToBeDone' column");
+        JsonNode finalStartCards = finalBoard.get("columns").get("start");
         assertEquals(2, finalStartCards.size());
         assertEquals(moduleId, finalStartCards.get(0).get("moduleId").asLong());
         assertEquals(0, finalStartCards.get(0).get("position").asInt());
         assertEquals("start", finalStartCards.get(0).get("status").asText());
+
+        // Verify new module created without explicit status defaults to 'ToBeDone'
+        String toBeDoneModulePayload = mapper.writeValueAsString(new Object() {
+            public final String title = "Default Initial State Module";
+            public final String description = "Testing ToBeDone default initial state";
+            public final String priority = "medium";
+        });
+        HttpResponse<String> createToBeDoneResp = adminClient.send(HttpRequest.newBuilder()
+                .uri(URI.create(base() + "/api/kanban/modules?versionId=" + versionId))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(toBeDoneModulePayload))
+                .build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, createToBeDoneResp.statusCode());
+        JsonNode toBeDoneModNode = mapper.readTree(createToBeDoneResp.body());
+        assertEquals("ToBeDone", toBeDoneModNode.get("status").asText(), "Default module status must be 'ToBeDone'");
+
+        // Verify it appears in 'ToBeDone' column on board
+        HttpResponse<String> boardWithToBeDoneResp = adminClient.send(getBoardReq, HttpResponse.BodyHandlers.ofString());
+        JsonNode toBeDoneCards = mapper.readTree(boardWithToBeDoneResp.body()).get("columns").get("ToBeDone");
+        assertNotNull(toBeDoneCards);
+        assertTrue(toBeDoneCards.size() >= 1);
+        assertEquals(toBeDoneModNode.get("moduleId").asLong(), toBeDoneCards.get(toBeDoneCards.size() - 1).get("moduleId").asLong());
     }
 }

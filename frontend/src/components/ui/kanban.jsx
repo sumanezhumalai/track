@@ -1,7 +1,5 @@
 import * as React from 'react'
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { mergeProps } from '@base-ui/react/merge-props'
-import { useRender } from '@base-ui/react/use-render'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import {
   DndContext,
@@ -47,12 +45,6 @@ const KanbanContext = createContext({
   modifiers: undefined
 })
 
-const ColumnContext = createContext({
-  attributes: {},
-  listeners: undefined,
-  isDragging: false,
-  disabled: false
-})
 
 const ItemContext = createContext({
   listeners: undefined,
@@ -76,7 +68,6 @@ function Kanban({
   getItemValue,
   children,
   className,
-  render,
   onMove,
   modifiers,
   onDragStart: onDragStartProp,
@@ -88,13 +79,14 @@ function Kanban({
   const [activeId, setActiveId] = useState(null)
 
   const columnsRef = useRef(columns)
-  columnsRef.current = columns
-
   const getItemValueRef = useRef(getItemValue)
-  getItemValueRef.current = getItemValue
-
   const onMoveRef = useRef(onMove)
-  onMoveRef.current = onMove
+
+  useEffect(() => {
+    columnsRef.current = columns
+    getItemValueRef.current = getItemValue
+    onMoveRef.current = onMove
+  })
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: pointerActivationConstraint }),
@@ -301,37 +293,31 @@ function Kanban({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {useRender({
-          defaultTagName: 'div',
-          render,
-          props: mergeProps(defaultProps, props)
-        })}
+        <div {...defaultProps} {...props}>
+          {children}
+        </div>
       </DndContext>
     </KanbanContext.Provider>
   )
 }
 
-function KanbanBoard({ className, render, ...props }) {
+function KanbanBoard({ className, ...props }) {
   const { columnIds } = useContext(KanbanContext)
 
   const defaultProps = {
     'data-slot': 'kanban-board',
-    className: cn('grid auto-rows-fr gap-4 sm:grid-cols-3', className),
+    className: cn('gap-4', className),
     children: props.children
   }
 
   return (
     <SortableContext items={columnIds} strategy={rectSortingStrategy}>
-      {useRender({
-        defaultTagName: 'div',
-        render,
-        props: mergeProps(defaultProps, props)
-      })}
+      <div {...defaultProps} {...props} />
     </SortableContext>
   )
 }
 
-function KanbanColumn({ value, className, render, disabled, ...props }) {
+function KanbanColumn({ value, className, disabled, ...props }) {
   const isOverlay = useContext(IsOverlayContext)
 
   const {
@@ -381,54 +367,10 @@ function KanbanColumn({ value, className, render, disabled, ...props }) {
         children: props.children,
       }
 
-  const columnCtxValue = isOverlay
-    ? {
-        attributes: {},
-        listeners: undefined,
-        isDragging: true,
-        disabled: false,
-      }
-    : { attributes, listeners, isDragging: isColumnDragging, disabled }
-
-  const renderedContent = useRender({
-    defaultTagName: 'div',
-    render,
-    props: mergeProps(defaultProps, props),
-  })
-
-  return (
-    <ColumnContext.Provider value={columnCtxValue}>
-      {renderedContent}
-    </ColumnContext.Provider>
-  )
+  return <div {...defaultProps} {...props} />
 }
 
-function KanbanColumnHandle({ className, render, cursor = true, ...props }) {
-  const { attributes, listeners, isDragging, disabled } = useContext(ColumnContext)
-
-  const defaultProps = {
-    'data-slot': 'kanban-column-handle',
-    'data-dragging': isDragging,
-    'data-disabled': disabled,
-    suppressHydrationWarning: true,
-    ...attributes,
-    ...listeners,
-    className: cn(
-      'opacity-0 transition-opacity group-hover/kanban-column:opacity-100',
-      cursor && (isDragging ? 'cursor-grabbing!' : 'cursor-grab!'),
-      className
-    ),
-    children: props.children
-  }
-
-  return useRender({
-    defaultTagName: 'div',
-    render,
-    props: mergeProps(defaultProps, props)
-  })
-}
-
-function KanbanItem({ value, className, render, disabled, ...props }) {
+function KanbanItem({ value, className, disabled, ...props }) {
   const isOverlay = useContext(IsOverlayContext)
 
   const {
@@ -479,20 +421,14 @@ function KanbanItem({ value, className, render, disabled, ...props }) {
     ? { listeners: undefined, isDragging: true, disabled: false }
     : { listeners, isDragging: isItemDragging, disabled }
 
-  const renderedContent = useRender({
-    defaultTagName: 'div',
-    render,
-    props: mergeProps(defaultProps, props)
-  })
-
   return (
     <ItemContext.Provider value={itemCtxValue}>
-      {renderedContent}
+      <div {...defaultProps} {...props} />
     </ItemContext.Provider>
   )
 }
 
-function KanbanItemHandle({ className, render, cursor = true, ...props }) {
+function KanbanItemHandle({ className, cursor = true, ...props }) {
   const { listeners, isDragging, disabled } = useContext(ItemContext)
 
   const defaultProps = {
@@ -504,14 +440,10 @@ function KanbanItemHandle({ className, render, cursor = true, ...props }) {
     children: props.children
   }
 
-  return useRender({
-    defaultTagName: 'div',
-    render,
-    props: mergeProps(defaultProps, props)
-  })
+  return <div {...defaultProps} {...props} />
 }
 
-function KanbanColumnContent({ value, className, render, ...props }) {
+function KanbanColumnContent({ value, className, ...props }) {
   const { columns, getItemId } = useContext(KanbanContext)
 
   const itemIds = useMemo(() => columns[value].map(getItemId), [columns, getItemId, value])
@@ -524,11 +456,7 @@ function KanbanColumnContent({ value, className, render, ...props }) {
 
   return (
     <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-      {useRender({
-        defaultTagName: 'div',
-        render,
-        props: mergeProps(defaultProps, props)
-      })}
+      <div {...defaultProps} {...props} />
     </SortableContext>
   )
 }
@@ -563,7 +491,6 @@ export {
   Kanban,
   KanbanBoard,
   KanbanColumn,
-  KanbanColumnHandle,
   KanbanItem,
   KanbanItemHandle,
   KanbanColumnContent,

@@ -10,8 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../api/axios'
 import ProjectCard from '../components/ProjectCard'
-import NewProjectModal from '../components/NewProjectModal'
-import EditProjectModal from '../components/EditProjectModal'
+import ProjectModal from '../components/ProjectModal'
 import BranchManagementModal from '../components/BranchManagementModal'
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import { getStoredUser } from '../lib/avatar'
@@ -224,19 +223,15 @@ export default function FeaturesModules() {
         </div>
       )}
 
-      {/* Add Project Modal */}
-      <NewProjectModal
-        isOpen={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        onCreated={() => fetchProjectsAndVersions()}
-      />
-
-      {/* Edit Project Modal */}
-      <EditProjectModal
-        isOpen={Boolean(projectToEdit)}
+      {/* Project Modal (Add or Edit) */}
+      <ProjectModal
+        isOpen={showNewModal || Boolean(projectToEdit)}
         project={projectToEdit}
-        onClose={() => setProjectToEdit(null)}
-        onUpdated={() => fetchProjectsAndVersions()}
+        onClose={() => {
+          setShowNewModal(false)
+          setProjectToEdit(null)
+        }}
+        onSaved={() => fetchProjectsAndVersions()}
       />
 
       {/* Branch Management Studio Modal */}

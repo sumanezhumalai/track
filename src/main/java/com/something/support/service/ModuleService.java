@@ -34,7 +34,7 @@ public class ModuleService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Version not found: " + versionId));
 
-        ModuleStatus status = req.status() != null ? req.status() : ModuleStatus.start;
+        ModuleStatus status = req.status() != null ? req.status() : ModuleStatus.ToBeDone;
 
         // Append to bottom of the target column: position = MAX + 1, or 0 if empty
         int position = moduleRepo.findMaxPositionInColumn(versionId, status)
@@ -128,14 +128,6 @@ public class ModuleService {
 
     // ── Drag-and-drop: move single card ───────────────────────────────────────
 
-    /**
-     * Moves a card to a new column (status) and/or position.
-     * Overload for internal callers / tests defaulting to admin privileges.
-     */
-    @Transactional
-    public void moveModule(Long moduleId, ModuleStatus newStatus, int newPosition, String movedBy) {
-        moveModule(moduleId, newStatus, newPosition, movedBy, true);
-    }
 
     /**
      * Moves a card to a new column (status) and/or position with caller ownership check.
@@ -225,10 +217,6 @@ public class ModuleService {
         return subtask;
     }
 
-    @Transactional
-    public ModuleSubtask toggleSubtask(Long subtaskId, String toggledBy) {
-        return toggleSubtask(subtaskId, toggledBy, true);
-    }
 
     @Transactional
     public ModuleSubtask toggleSubtask(Long subtaskId, String toggledBy, boolean isAdmin) {

@@ -7,9 +7,8 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { CheckIcon, SearchIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getAvatarInitials, getAvatarColorClass, normalizeUserData } from '@/lib/avatar'
@@ -85,11 +84,11 @@ export default function UserListDialog({
         <div className='px-6 pb-3'>
           <div className='relative'>
             <SearchIcon className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-            <Input
+            <input
               placeholder='Search by name, role, or team...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='h-9 pl-9 text-sm'
+              className='input h-9 pl-9 text-sm'
             />
           </div>
         </div>

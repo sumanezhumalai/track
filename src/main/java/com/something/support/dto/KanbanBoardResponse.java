@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Full Kanban board response — returned by GET /api/kanban/projects/{id}/board.
  *
- * columns: Map keyed by ModuleStatus name ("start","testing","production").
+ * columns: Map keyed by ModuleStatus name ("ToBeDone","start","testing","production").
  *          Each value is the ordered card list for that column (position ASC).
  *          Admins receive all modules; devs receive only their assigned modules.
  */

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BarChart,
@@ -24,13 +24,25 @@ import LiveTimer from '../components/LiveTimer'
 import api from '../api/axios'
 import { getStoredUser } from '../lib/avatar'
 
+import ModulesDashboardView from '../components/dashboard/ModulesDashboardView'
+
 export default function Dashboard() {
+  const modulesRef = useRef(null)
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [modulesLoading, setModulesLoading] = useState(false)
   const [error, setError] = useState('')
+  const [activeDomain, setActiveDomain] = useState(() => {
+    return localStorage.getItem('egs_dashboard_active_tab') || 'modules'
+  })
 
   const user = getStoredUser()
   const isAdmin = user.isAdmin
+
+  const handleDomainChange = (domain) => {
+    setActiveDomain(domain)
+    localStorage.setItem('egs_dashboard_active_tab', domain)
+  }
 
   const fetchSessions = async () => {
     setLoading(true)
@@ -38,7 +50,7 @@ export default function Dashboard() {
     try {
       const res = await api.get('/sessions')
       setSessions(res.data || [])
-    } catch (err) {
+    } catch {
       setError('Failed to fetch support sessions.')
     } finally {
       setLoading(false)
@@ -48,6 +60,16 @@ export default function Dashboard() {
   useEffect(() => {
     fetchSessions()
   }, [])
+
+  const handleRefresh = () => {
+    if (activeDomain === 'modules') {
+      modulesRef.current?.refresh()
+    } else {
+      fetchSessions()
+    }
+  }
+
+  const isRefreshing = activeDomain === 'modules' ? modulesLoading : loading
 
   const totalCount = sessions.length
   const activeSessions = sessions.filter((s) => !s.endTime)
@@ -89,30 +111,72 @@ export default function Dashboard() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gh-border">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-stone-900">
-            Operational Overview
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-stone-900">
+              Operational Overview
+            </h1>
+            <span className="badge-role">
+              {isAdmin ? 'Admin' : 'Engineer'}
+            </span>
+          </div>
           <p className="text-xs text-stone-500 mt-0.5">
-            Real-time telemetry and team engagement metrics.
+            Real-time delivery progress, module workflows, and support telemetry.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Header Action Controls */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Unified Segmented Switcher */}
+          <div className="segmented-control">
+            <button
+              type="button"
+              onClick={() => handleDomainChange('modules')}
+              className={activeDomain === 'modules' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Features & Modules
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDomainChange('sessions')}
+              className={activeDomain === 'sessions' ? 'segmented-tab-active' : 'segmented-tab'}
+            >
+              Support Sessions
+            </button>
+          </div>
+
+          {/* Universal Refresh Button */}
           <button
-            onClick={fetchSessions}
-            disabled={loading}
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
             className="btn-secondary"
+            title="Refresh current overview"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
 
-          <Link to="/sessions" className="btn-primary">
-            <Plus className="w-3.5 h-3.5" />
-            <span>{isAdmin ? 'Manage Sessions' : 'New Session'}</span>
-          </Link>
+          {/* Primary CTA */}
+          {activeDomain === 'modules' ? (
+            <Link to="/features" className="btn-primary">
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isAdmin ? 'Manage Initiatives' : 'View Initiatives'}</span>
+            </Link>
+          ) : (
+            <Link to="/sessions" className="btn-primary">
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isAdmin ? 'Manage Sessions' : 'New Session'}</span>
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* Domain Render with Hardware-Accelerated Smooth Transition & Keep-Alive */}
+      <div className={activeDomain === 'modules' ? 'animate-view-fade-in block' : 'hidden'}>
+        <ModulesDashboardView ref={modulesRef} onLoadingChange={setModulesLoading} />
+      </div>
+
+      <div className={activeDomain === 'sessions' ? 'animate-view-fade-in block space-y-6' : 'hidden'}>
 
       {error && (
         <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
@@ -259,6 +323,7 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )

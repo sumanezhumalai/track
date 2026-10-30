@@ -11,26 +11,11 @@
  */
 export function getAvatarInitials(name) {
   if (!name || typeof name !== 'string') return '??'
-  const trimmed = name.trim()
-  if (!trimmed) return '??'
-
-  // Split by whitespace, underscore, hyphen, or dot
-  const parts = trimmed.split(/[_\s.-]+/).filter(Boolean)
-
-  if (parts.length >= 2) {
-    const firstChar = parts[0][0].toUpperCase()
-    const secondChar = parts[1][0].toLowerCase()
-    return `${firstChar}${secondChar}`
-  }
-
-  const word = parts[0]
-  if (word.length >= 2) {
-    const firstChar = word[0].toUpperCase()
-    const secondChar = word[1].toLowerCase()
-    return `${firstChar}${secondChar}`
-  }
-
-  return word[0].toUpperCase()
+  const parts = name.trim().split(/[_\s.-]+/).filter(Boolean)
+  if (!parts.length) return '??'
+  const first = parts[0][0].toUpperCase()
+  const second = (parts.length >= 2 ? parts[1][0] : parts[0][1] || '').toLowerCase()
+  return `${first}${second}` || first
 }
 
 /**
@@ -63,18 +48,7 @@ export function getAvatarColorClass(name) {
  */
 export function normalizeUserData(raw) {
   if (!raw) {
-    return {
-      id: '',
-      devId: null,
-      devName: '',
-      name: '',
-      initials: '??',
-      avatar: null,
-      role: '',
-      team: '',
-      type: 'dev',
-      email: '',
-    }
+    return { id: '', devId: null, devName: '', name: '', initials: '??', role: '', team: '', type: 'dev' }
   }
 
   if (typeof raw === 'string') {
@@ -85,11 +59,9 @@ export function normalizeUserData(raw) {
       devName: name,
       name,
       initials: getAvatarInitials(name),
-      avatar: null,
       role: '',
       team: '',
       type: 'dev',
-      email: '',
     }
   }
 
@@ -102,11 +74,9 @@ export function normalizeUserData(raw) {
     devName,
     name: devName,
     initials: getAvatarInitials(devName),
-    avatar: raw.avatar || null,
     role: raw.role || '',
     team: raw.team || '',
     type: raw.type || 'dev',
-    email: raw.email || '',
   }
 }
 

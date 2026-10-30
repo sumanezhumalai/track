@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import {
   X,
-  Calendar as CalendarIcon,
-  Plus,
   ListTodo,
   UserPlus,
   Loader2,
+  Plus,
 } from 'lucide-react'
 import {
   Sheet,
@@ -14,31 +13,14 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
 import UserListDialog from '@/components/kanban/UserListDialog'
 import { cn } from '@/lib/utils'
-import { getPriorityColor, formatDate, toDateString } from '@/lib/taskUtils'
+import { getPriorityColor, toDateString } from '@/lib/taskUtils'
 import api from '@/api/axios'
 import { getAvatarInitials, getAvatarColorClass, normalizeUserData } from '@/lib/avatar'
 
 const STATUSES = [
+  { value: 'ToBeDone', label: 'To Be Done' },
   { value: 'start', label: 'Start' },
   { value: 'testing', label: 'Testing' },
   { value: 'production', label: 'Production' },
@@ -54,7 +36,7 @@ export default function NewModuleForm({
   const defaultForm = {
     title: '',
     description: '',
-    status: 'start',
+    status: 'ToBeDone',
     priority: 'medium',
     assigneeDevNames: [],
     dueDate: null,
@@ -151,87 +133,66 @@ export default function NewModuleForm({
             <label className='text-sm font-medium'>
               Title <span className='text-destructive'>*</span>
             </label>
-            <Input
+            <input
               value={formData.title}
               onChange={e => setFormData(d => ({ ...d, title: e.target.value }))}
               placeholder='Enter module title'
               required
+              className='input'
             />
           </div>
 
           {/* Description */}
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Description</label>
-            <Textarea
+            <textarea
               value={formData.description}
               onChange={e => setFormData(d => ({ ...d, description: e.target.value }))}
               placeholder='Enter module description'
-              className='min-h-[90px] resize-none'
+              className='input min-h-[90px] resize-none py-2'
             />
           </div>
 
           {/* Status */}
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Status</label>
-            <Select value={formData.status} onValueChange={v => setFormData(d => ({ ...d, status: v }))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUSES.map(s => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={formData.status}
+              onChange={e => setFormData(d => ({ ...d, status: e.target.value }))}
+              className='input'
+            >
+              {STATUSES.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Priority */}
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Priority</label>
-            <Select value={formData.priority} onValueChange={v => setFormData(d => ({ ...d, priority: v }))}>
-              <SelectTrigger>
-                <SelectValue>
-                  <div className='flex items-center gap-2'>
-                    <span className={cn('h-2 w-2 rounded-full', getPriorityColor(formData.priority))} />
-                    <span className='capitalize'>{formData.priority}</span>
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
+            <div className='relative flex items-center'>
+              <span className={cn('absolute left-3 h-2 w-2 rounded-full pointer-events-none', getPriorityColor(formData.priority))} />
+              <select
+                value={formData.priority}
+                onChange={e => setFormData(d => ({ ...d, priority: e.target.value }))}
+                className='input pl-7 capitalize'
+              >
                 {['low', 'medium', 'high'].map(p => (
-                  <SelectItem key={p} value={p}>
-                    <div className='flex items-center gap-2'>
-                      <span className={cn('h-2 w-2 rounded-full', getPriorityColor(p))} />
-                      <span className='capitalize'>{p}</span>
-                    </div>
-                  </SelectItem>
+                  <option key={p} value={p}>{p}</option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+            </div>
           </div>
 
           {/* Due Date */}
           <div className='space-y-2'>
             <label className='text-sm font-medium'>Due Date</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant='outline'
-                  className={cn('w-full justify-start text-left font-normal', !formData.dueDate && 'text-muted-foreground')}
-                >
-                  <CalendarIcon className='mr-2 h-4 w-4' />
-                  {formData.dueDate ? formatDate(formData.dueDate) : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className='w-auto p-0' align='start'>
-                <Calendar
-                  selected={formData.dueDate}
-                  onSelect={date => setFormData(d => ({ ...d, dueDate: date || null }))}
-                  captionLayout='dropdown'
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <input
+              type='date'
+              value={toDateString(formData.dueDate) || ''}
+              onChange={e => setFormData(d => ({ ...d, dueDate: e.target.value ? new Date(e.target.value) : null }))}
+              className='input'
+            />
           </div>
 
           {/* Assignees */}
@@ -274,13 +235,15 @@ export default function NewModuleForm({
             <div className='flex items-center gap-2'>
               <ListTodo className='h-4 w-4 text-muted-foreground' />
               <label className='text-sm font-medium'>Subtasks</label>
-              <Badge variant='secondary' className='h-5 text-xs'>{formData.subtaskTexts.length}</Badge>
+              <span className='h-5 px-1.5 py-0.5 rounded text-xs bg-stone-100 text-stone-600 font-medium'>
+                {formData.subtaskTexts.length}
+              </span>
             </div>
 
             <div className='space-y-2'>
               {formData.subtaskTexts.map((text, idx) => (
                 <div key={idx} className='flex items-center gap-2 group'>
-                  <Checkbox checked={false} disabled />
+                  <input type='checkbox' checked={false} disabled className='rounded border-stone-300 text-emerald-600' />
                   <span className='text-sm flex-1'>{text}</span>
                   <Button
                     type='button'
@@ -294,12 +257,12 @@ export default function NewModuleForm({
                 </div>
               ))}
               <div className='flex items-center gap-2 pt-1'>
-                <Input
+                <input
                   placeholder='Add a subtask...'
                   value={newSubtask}
                   onChange={e => setNewSubtask(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSubtask() } }}
-                  className='h-9 text-sm'
+                  className='input h-9 text-sm'
                 />
                 <Button type='button' size='icon' variant='ghost' className='h-9 w-9 shrink-0' onClick={handleAddSubtask}>
                   <Plus className='h-4 w-4' />

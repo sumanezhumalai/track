@@ -69,4 +69,39 @@ public interface ModuleRepository extends JpaRepository<Module, Long> {
                                  @Param("status") ModuleStatus status,
                                  @Param("position") int position,
                                  @Param("now") LocalDateTime now);
+
+    // ── Analytics & Dashboard Queries ──────────────────────────────────────────
+
+    long countByStatus(ModuleStatus status);
+
+    long countByPriority(String priority);
+
+    @Query("SELECT COUNT(m) FROM Module m WHERE m.dueDate IS NOT NULL AND m.dueDate < :today AND m.status != :completedStatus")
+    long countOverdue(@Param("today") java.time.LocalDate today, @Param("completedStatus") ModuleStatus completedStatus);
+
+    default long countOverdue(java.time.LocalDate today) {
+        return countOverdue(today, ModuleStatus.production);
+    }
+
+    @Query("SELECT COUNT(m) FROM Module m WHERE m.dueDate IS NOT NULL AND m.dueDate < :today AND m.status != :completedStatus AND (" +
+           "m.assignedTo = :devName OR EXISTS (SELECT 1 FROM ModuleAssignee ma WHERE ma.module = m AND ma.devName = :devName))")
+    long countOverdueForDev(@Param("devName") String devName, @Param("today") java.time.LocalDate today, @Param("completedStatus") ModuleStatus completedStatus);
+
+    default long countOverdueForDev(String devName, java.time.LocalDate today) {
+        return countOverdueForDev(devName, today, ModuleStatus.production);
+    }
+
+    @Query("SELECT m FROM Module m WHERE m.assignedTo = :devName OR EXISTS (SELECT 1 FROM ModuleAssignee ma WHERE ma.module = m AND ma.devName = :devName) ORDER BY m.updatedAt DESC")
+    List<Module> findAllAssignedToDev(@Param("devName") String devName);
+
+    @Query("SELECT m FROM Module m WHERE m.dueDate IS NOT NULL AND m.dueDate >= :today AND m.status != :completedStatus AND (" +
+           "m.assignedTo = :devName OR EXISTS (SELECT 1 FROM ModuleAssignee ma WHERE ma.module = m AND ma.devName = :devName)) ORDER BY m.dueDate ASC")
+    List<Module> findUpcomingDeadlinesForDev(@Param("devName") String devName, @Param("today") java.time.LocalDate today, @Param("completedStatus") ModuleStatus completedStatus, org.springframework.data.domain.Pageable pageable);
+
+    default List<Module> findUpcomingDeadlinesForDev(String devName, java.time.LocalDate today, org.springframework.data.domain.Pageable pageable) {
+        return findUpcomingDeadlinesForDev(devName, today, ModuleStatus.production, pageable);
+    }
+
+    @Query("SELECT m FROM Module m ORDER BY m.updatedAt DESC")
+    List<Module> findRecentUpdated(org.springframework.data.domain.Pageable pageable);
 }
